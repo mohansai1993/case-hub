@@ -1,0 +1,413 @@
+/* ==========================================================================
+   Login / forgot password / reset password  -  sized to the Figma design.
+   Everything is scoped to body.auth-page so admin panel forms are untouched.
+   Loaded after style.css and overrides its (much smaller) login rules.
+   ========================================================================== */
+
+body.auth-page {
+  --login-primary: #4050fa;
+  --login-primary-dark: #3241e6;
+  --login-text: #17171c;
+  --login-body: #4b4b55;
+  --login-label: #3a3a44;
+  --login-placeholder: #b0b0ba;
+  --login-error: #d93a3a;
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #f6f6f9;
+  color: var(--login-text);
+  -webkit-font-smoothing: antialiased;
+}
+
+body.auth-page input,
+body.auth-page button {
+  font-family: inherit;
+}
+
+/* ---------- Card ---------- */
+
+.auth-page .page {
+  padding: 29px;
+  background: #f6f6f9;
+}
+
+.auth-page .login-card {
+  width: min(1170px, 100%);
+  min-height: max(640px, calc(100vh - 58px));
+  grid-template-columns: 5fr 7fr;
+  border-radius: 28px;
+  background: #f8f8fb;
+  box-shadow: 0 24px 64px rgba(30, 30, 70, 0.07);
+}
+
+/* ---------- Left: image + copy ---------- */
+
+.auth-page .visual-panel {
+  min-height: 100%;
+  background: #14202d;
+}
+
+.auth-page .image-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(6, 18, 32, 0.74) 0%,
+    rgba(6, 18, 32, 0.5) 38%,
+    rgba(6, 18, 32, 0.08) 75%,
+    rgba(6, 18, 32, 0) 100%
+  );
+}
+
+.auth-page .brand {
+  top: 48px;
+  left: 49px;
+}
+
+.auth-page .brand-logo {
+  height: 84px;
+}
+
+.auth-page .visual-copy {
+  top: 160px;
+  left: 49px;
+  right: 24px;
+}
+
+.auth-page .visual-copy h1 {
+  max-width: none;
+  font-size: 32px;
+  line-height: 1.2;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.auth-page .visual-copy p {
+  max-width: 390px;
+  margin-top: 22px;
+  font-size: 18px;
+  line-height: 1.4;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+/* ---------- Right: form ---------- */
+
+.auth-page .form-panel {
+  background: #f8f8fb;
+}
+
+/* soft rings behind the watermark (bottom-right) */
+.auth-page .form-panel::before,
+.auth-page .form-panel::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.auth-page .form-panel::before {
+  right: -160px;
+  bottom: -190px;
+  width: 520px;
+  height: 520px;
+  background: rgba(120, 132, 220, 0.07);
+}
+
+.auth-page .form-panel::after {
+  right: -90px;
+  bottom: -120px;
+  width: 380px;
+  height: 380px;
+  background: rgba(120, 132, 220, 0.08);
+}
+
+.auth-page .form-content {
+  width: min(455px, calc(100% - 64px));
+  margin-left: 0;
+}
+
+.auth-page .form-content h2 {
+  font-size: 30px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--login-text);
+}
+
+.auth-page .subtitle {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--login-body);
+}
+
+.auth-page .field {
+  margin-top: 40px;
+}
+
+.auth-page .password-field,
+.auth-page .field + .field {
+  margin-top: 24px;
+}
+
+.auth-page .field label {
+  margin-bottom: 10px;
+  font-size: 14px;
+  line-height: 1.2;
+  font-weight: 600;
+  color: var(--login-label);
+}
+
+/* labels typed in capitals (PASSWORD, NEW PASSWORD, ...) */
+.auth-page .field:has(.password-wrap) label {
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.auth-page .field input {
+  height: 52px;
+  padding: 0 18px;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 0 0 1px #eeeef3;
+  font-size: 15px;
+  color: var(--login-text);
+}
+
+.auth-page .field input::placeholder {
+  color: var(--login-placeholder);
+}
+
+.auth-page .field input:focus {
+  box-shadow: 0 0 0 2px var(--login-primary);
+}
+
+.auth-page .password-wrap input {
+  padding-right: 52px;
+}
+
+.auth-page .eye-btn {
+  right: 14px;
+  width: 28px;
+  height: 28px;
+  color: #1c1c22;
+}
+
+.auth-page .eye-btn svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ---------- Remember / forgot ---------- */
+
+.auth-page .options {
+  margin-top: 28px;
+  font-size: 14px;
+}
+
+.auth-page .remember {
+  gap: 12px;
+  color: var(--login-body);
+}
+
+.auth-page .remember input {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  border-radius: 4px;
+  accent-color: var(--login-primary);
+}
+
+.auth-page .forgot {
+  color: var(--login-primary);
+  font-weight: 600;
+}
+
+/* ---------- Primary button ---------- */
+
+.auth-page .login-btn {
+  height: 60px;
+  margin-top: 28px;
+  border-radius: 10px;
+  background: var(--login-primary);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  box-shadow: 0 12px 26px rgba(255, 140, 70, 0.28);
+}
+
+.auth-page .login-btn:hover {
+  background: var(--login-primary-dark);
+}
+
+.auth-page .login-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ---------- Messages, OTP, links ---------- */
+
+.auth-page .error-msg {
+  margin-top: 10px;
+  min-height: 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--login-error);
+}
+
+.auth-page .error-msg:empty {
+  display: none;
+}
+
+.auth-page .error-msg.is-visible {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: #fdecec;
+  font-size: 14px;
+}
+
+.auth-page .success-msg {
+  margin-top: 20px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.auth-page .otp-section {
+  margin-top: 4px;
+}
+
+.auth-page .otp-inputs {
+  gap: 12px;
+}
+
+.auth-page .field .otp-inputs input {
+  height: 56px;
+  font-size: 20px;
+}
+
+.auth-page .otp-meta {
+  margin-top: 16px;
+  font-size: 14px;
+}
+
+.auth-page .otp-timer {
+  color: var(--login-body);
+}
+
+.auth-page .link-btn {
+  font-size: 14px;
+  color: var(--login-primary);
+}
+
+.auth-page .link-btn:disabled {
+  color: var(--login-placeholder);
+}
+
+.auth-page .back-link {
+  margin-top: 28px;
+  font-size: 14px;
+  color: var(--login-primary);
+}
+
+/* ---------- Watermark ---------- */
+
+.auth-page .watermark {
+  right: 19px;
+  bottom: 19px;
+  width: 140px;
+  height: 140px;
+  z-index: 1;
+}
+
+/* ---------- Responsive ---------- */
+
+@media (max-width: 1100px) {
+  .auth-page .visual-copy h1 {
+    font-size: 28px;
+  }
+
+  .auth-page .visual-copy p {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 900px) {
+  .auth-page .page {
+    padding: 16px;
+  }
+
+  .auth-page .login-card {
+    grid-template-columns: 1fr;
+    min-height: 0;
+    width: min(560px, 100%);
+    border-radius: 22px;
+  }
+
+  .auth-page .visual-panel {
+    min-height: 300px;
+  }
+
+  .auth-page .brand {
+    top: 28px;
+    left: 28px;
+  }
+
+  .auth-page .brand-logo {
+    height: 64px;
+  }
+
+  .auth-page .visual-copy {
+    top: 112px;
+    left: 28px;
+    right: 28px;
+  }
+
+  .auth-page .visual-copy h1 {
+    font-size: 24px;
+  }
+
+  .auth-page .visual-copy p {
+    display: none;
+  }
+
+  .auth-page .form-panel {
+    padding: 44px 0 64px;
+  }
+
+  .auth-page .watermark {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-page .page {
+    padding: 0;
+  }
+
+  .auth-page .login-card {
+    width: 100%;
+    min-height: 100vh;
+    border-radius: 0;
+  }
+
+  .auth-page .form-content h2 {
+    font-size: 26px;
+  }
+
+  .auth-page .field .otp-inputs input {
+    height: 48px;
+  }
+
+  .auth-page .otp-inputs {
+    gap: 8px;
+  }
+}
+
+/* keep the book titles (LAW / JUSTICE / LEGAL) inside the crop, as in Figma */
+.auth-page .hero-image {
+  object-position: 0% 50%;
+}
