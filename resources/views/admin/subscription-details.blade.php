@@ -14,7 +14,7 @@
     <p>Manage all registered client accounts.</p>
   </div>
 
-  <a href="{{ route('admin.client-details') }}" class="user-chip">
+  <a href="{{ route('admin.clients') }}" class="user-chip">
     <span class="mini-avatar">RS</span>
     <strong>Rahul Sharma</strong>
     <small>rahul.sharma@corpmail.com</small>

@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\Admin\AccountActionController;
+use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\HomeController;
+use App\Http\Controllers\Admin\LawyerController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -62,14 +65,34 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
         Route::view('/dashboard', 'admin.dashboard')
             ->middleware('permission:dashboard.view')->name('dashboard');
 
+        // Clients: list / details need clients.view; suspend / activate need clients.update.
         Route::middleware('permission:clients.view')->group(function () {
-            Route::view('/clients', 'admin.clients')->name('clients');
-            Route::view('/client-details', 'admin.client-details')->name('client-details');
+            Route::get('/clients', [ClientController::class, 'index'])->name('clients');
+            Route::get('/clients/{id}', [ClientController::class, 'show'])->whereUuid('id')->name('client-details');
+        });
+        Route::middleware('permission:clients.update')->group(function () {
+            Route::post('/clients/{id}/suspend', [AccountActionController::class, 'suspend'])
+                ->defaults('type', 'client')->whereUuid('id')->name('clients.suspend');
+            Route::post('/clients/{id}/activate', [AccountActionController::class, 'activate'])
+                ->defaults('type', 'client')->whereUuid('id')->name('clients.activate');
         });
 
+        // Lawyers: same, plus lawyers.verify for the approve / reject decision.
         Route::middleware('permission:lawyers.view')->group(function () {
-            Route::view('/lawyers', 'admin.lawyers')->name('lawyers');
-            Route::view('/lawyer-details', 'admin.lawyer-details')->name('lawyer-details');
+            Route::get('/lawyers', [LawyerController::class, 'index'])->name('lawyers');
+            Route::get('/lawyers/{id}', [LawyerController::class, 'show'])->whereUuid('id')->name('lawyer-details');
+        });
+        Route::middleware('permission:lawyers.update')->group(function () {
+            Route::post('/lawyers/{id}/suspend', [AccountActionController::class, 'suspend'])
+                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.suspend');
+            Route::post('/lawyers/{id}/activate', [AccountActionController::class, 'activate'])
+                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.activate');
+        });
+        Route::middleware('permission:lawyers.verify')->group(function () {
+            Route::post('/lawyers/{id}/approve', [AccountActionController::class, 'approve'])
+                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.approve');
+            Route::post('/lawyers/{id}/reject', [AccountActionController::class, 'reject'])
+                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.reject');
         });
 
         Route::middleware('permission:subscriptions.view')->group(function () {

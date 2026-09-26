@@ -3,6 +3,15 @@
 @section('title', 'CaseHub Lawyer Details')
 
 @section('content')
+@php
+  $admin = auth('admin')->user();
+  $canModerate = $admin->hasPermission('lawyers.update');
+  $canVerify = $admin->hasPermission('lawyers.verify');
+  $profile = $lawyer->lawyerProfile;
+  $verification = $profile->verification_status;
+  $status = $lawyer->status;
+@endphp
+
 <div class="page-head">
   <h1 class="title-back">
     <a href="{{ route('admin.lawyers') }}" class="back-btn" aria-label="Back to lawyers">
@@ -16,14 +25,14 @@
 <!-- LAWYER HEADER -->
 <section class="card client-card">
   <div class="client-main">
-    <div class="client-avatar avatar-online">SW</div>
+    <div class="client-avatar avatar-online">{{ $lawyer->initials() }}</div>
     <div>
       <h2 class="client-name">
-        Adv. Sarah Williams
-        <span class="status status-active">Active</span>
-        <span class="verify verify-verified">Verified</span>
+        {{ $lawyer->name }}
+        <span class="status status-{{ $status->value }}">{{ ucfirst($status->value) }}</span>
+        <span class="verify verify-{{ $verification->value }}">{{ ucfirst($verification->value) }}</span>
       </h2>
-      <p class="client-sub">Bar #NY-88210 &bull; Corporate &amp; IP Law &bull; Williams &amp; Associates</p>
+      <p class="client-sub">Lawyer ID: #{{ $lawyer->reference() }} &bull; {{ $profile->location }} &bull; {{ $profile->years_of_experience }} {{ \Illuminate\Support\Str::plural('year', $profile->years_of_experience) }} experience</p>
     </div>
   </div>
 </section>
@@ -34,7 +43,7 @@
   <section class="card">
     <div class="card-head">
       <div>
-        <span class="overline">Bar Credentials &amp; Metadata</span>
+        <span class="overline">Profile &amp; Metadata</span>
         <h2>Lawyer Information</h2>
       </div>
       <svg class="head-icon" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M3 13h18"/></svg>
@@ -43,75 +52,50 @@
     <div class="info-grid info-grid-3">
       <div class="info-item">
         <span>Full Name</span>
-        <strong>Adv. Sarah Williams</strong>
+        <strong>{{ $lawyer->name }}</strong>
       </div>
       <div class="info-item">
         <span>Email</span>
-        <a href="mailto:s.williams@jurislex.com" class="info-link">
-          s.williams@jurislex.com
-          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
-        </a>
+        <a href="mailto:{{ $lawyer->email }}" class="info-link">{{ $lawyer->email }}</a>
       </div>
       <div class="info-item">
         <span>Phone Number</span>
-        <strong>+1 (555) 349-8821</strong>
+        <strong>+91 {{ $lawyer->mobile }}{{ $lawyer->hasVerifiedMobile() ? '' : ' (not verified)' }}</strong>
       </div>
       <div class="info-item">
         <span>Specialization</span>
-        <strong>Corporate &amp; IP Law</strong>
+        <strong>{{ $lawyer->practiceAreas->pluck('name')->join(', ') ?: '—' }}</strong>
+      </div>
+      <div class="info-item">
+        <span>Location / Jurisdiction</span>
+        <strong>{{ $profile->location }}</strong>
       </div>
       <div class="info-item">
         <span>Registration Date</span>
-        <strong>12 Oct 2026</strong>
+        <strong>{{ $lawyer->created_at->format('d M Y') }}</strong>
       </div>
       <div class="info-item">
         <span>Account Status</span>
-        <strong><span class="status status-active">Active</span></strong>
+        <strong><span class="status status-{{ $status->value }}">{{ ucfirst($status->value) }}</span></strong>
       </div>
       <div class="info-item">
         <span>Verification Status</span>
-        <strong><span class="verify verify-verified">Verified</span></strong>
+        <strong><span class="verify verify-{{ $verification->value }}">{{ ucfirst($verification->value) }}</span></strong>
       </div>
-    </div>
-  </section>
-
-  <!-- CASE INFORMATION -->
-  <section class="card">
-    <div class="card-head">
-      <div>
-        <span class="overline">Caseload Summary</span>
-        <h2>Case Information</h2>
-      </div>
-      <svg class="head-icon" viewBox="0 0 24 24"><path d="M14 4l6 6M4 20l8-8M11 7l6 6M8 10l6 6"/></svg>
+      @if ($profile->verified_at)
+        <div class="info-item">
+          <span>Verified On</span>
+          <strong>{{ $profile->verified_at->format('d M Y') }}</strong>
+        </div>
+      @endif
     </div>
 
-    <div class="case-stats case-stats-5">
-      <div class="case-stat">
-        <span>Total Cases</span>
-        <strong>24</strong>
-        <svg class="ic-primary" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h6"/></svg>
+    @if ($profile->bio)
+      <div class="info-item" style="margin-top: 20px;">
+        <span>Professional Bio</span>
+        <strong style="font-weight: 500; white-space: pre-line;">{{ $profile->bio }}</strong>
       </div>
-      <div class="case-stat">
-        <span>New Cases</span>
-        <strong>3</strong>
-        <svg class="ic-primary" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M12 9v6M9 12h6"/></svg>
-      </div>
-      <div class="case-stat">
-        <span>Pending</span>
-        <strong>4</strong>
-        <svg class="ic-orange" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
-      </div>
-      <div class="case-stat">
-        <span>In Progress</span>
-        <strong>14</strong>
-        <svg class="ic-primary" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M3 9h18M8 2v4M16 2v4"/></svg>
-      </div>
-      <div class="case-stat">
-        <span>Closed</span>
-        <strong>3</strong>
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
-      </div>
-    </div>
+    @endif
   </section>
 
   <!-- ACCOUNT MANAGEMENT -->
@@ -124,31 +108,46 @@
       <svg class="head-icon" viewBox="0 0 24 24"><circle cx="11" cy="8" r="4"/><path d="M3 21a8 8 0 0 1 11-7.4"/><circle cx="18" cy="17" r="3"/></svg>
     </div>
 
-    <div class="inline-btns">
-      <button class="btn-inline btn-danger-soft" id="suspend-btn">
-        <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
-        Suspend Account
-      </button>
-      <button class="btn-inline btn-block-primary" id="approve-btn">
-        <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
-        Approve
-      </button>
-    </div>
+    @if ($canModerate || $canVerify)
+      <div class="inline-btns">
+        @if ($canModerate && $status !== \App\Enums\UserStatus::Suspended)
+          <button type="button" class="btn-inline btn-danger-soft" data-moderate="suspend"
+                  data-url="{{ route('admin.lawyers.suspend', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
+            <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
+            Suspend Account
+          </button>
+        @endif
+        @if ($canModerate && $status !== \App\Enums\UserStatus::Active)
+          <button type="button" class="btn-inline btn-block-primary" data-moderate="activate"
+                  data-url="{{ route('admin.lawyers.activate', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+            Activate Account
+          </button>
+        @endif
+        @if ($canVerify && $verification !== \App\Enums\VerificationStatus::Verified)
+          <button type="button" class="btn-inline btn-block-primary" data-moderate="approve"
+                  data-url="{{ route('admin.lawyers.approve', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
+            <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4Z"/><path d="M9 12l2 2 4-4"/></svg>
+            Approve Lawyer
+          </button>
+        @endif
+        @if ($canVerify && $verification !== \App\Enums\VerificationStatus::Rejected)
+          <button type="button" class="btn-inline btn-danger-soft" data-moderate="reject"
+                  data-url="{{ route('admin.lawyers.reject', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
+            Reject Lawyer
+          </button>
+        @endif
+      </div>
+    @else
+      <p class="empty-msg">You do not have permission to change this account.</p>
+    @endif
   </section>
+
+  @include('admin.partials.account-history', ['user' => $lawyer])
 </div>
 @endsection
 
 @push('scripts')
-<script>
-// Account actions — TODO: call backend API
-document.getElementById("suspend-btn").addEventListener("click", () => {
-  if (confirm("Are you sure you want to suspend this lawyer's account?")) {
-    alert("Account suspended.");
-  }
-});
-
-document.getElementById("approve-btn").addEventListener("click", () => {
-  alert("Lawyer approved.");
-});
-</script>
+@include('admin.partials.moderation-scripts')
 @endpush

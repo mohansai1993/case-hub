@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class AccountAction extends Model
+{
+    public const SUSPENDED = 'suspended';
+    public const ACTIVATED = 'activated';
+    public const LAWYER_APPROVED = 'lawyer_approved';
+    public const LAWYER_REJECTED = 'lawyer_rejected';
+
+    public const UPDATED_AT = null;
+
+    protected $guarded = [];
+
+    protected function casts(): array
+    {
+        return ['created_at' => 'datetime'];
+    }
+
+    public function admin(): BelongsTo
+    {
+        return $this->belongsTo(Admin::class);
+    }
+
+    public function label(): string
+    {
+        return match ($this->action) {
+            self::SUSPENDED => 'Account suspended',
+            self::ACTIVATED => 'Account activated',
+            self::LAWYER_APPROVED => 'Lawyer approved',
+            self::LAWYER_REJECTED => 'Lawyer rejected',
+            default => ucfirst(str_replace('_', ' ', $this->action)),
+        };
+    }
+}

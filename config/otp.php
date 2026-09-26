@@ -24,6 +24,25 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mobile app (client / lawyer) OTP
+    |--------------------------------------------------------------------------
+    |
+    | The app screens use a 4-digit code sent by SMS. A short code has only
+    | 10,000 combinations, so the attempt limit is what protects it: keep
+    | max_attempts low.
+    |
+    */
+
+    'app' => [
+        'length' => (int) env('APP_OTP_LENGTH', 4),
+        'ttl' => (int) env('APP_OTP_TTL_MINUTES', 10),
+        'resend_after' => (int) env('APP_OTP_RESEND_SECONDS', 59),
+        'max_attempts' => (int) env('APP_OTP_MAX_ATTEMPTS', 5),
+        'reset_token_ttl' => (int) env('APP_OTP_RESET_TOKEN_TTL_MINUTES', 15),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | SMS delivery
     |--------------------------------------------------------------------------
     |

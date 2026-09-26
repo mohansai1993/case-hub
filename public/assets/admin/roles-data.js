@@ -6,7 +6,7 @@ const ROLES_KEY = "casehub-roles";
 const PERMISSION_MODULES = [
   { id: "dashboard", name: "Dashboard", perms: ["View Dashboard"] },
   { id: "clients", name: "Client Management", perms: ["View Clients", "Add Client", "Edit Client", "Delete Client"] },
-  { id: "lawyers", name: "Lawyer Management", perms: ["View Lawyers", "Add Lawyer", "Edit Lawyer", "Delete Lawyer"] },
+  { id: "lawyers", name: "Lawyer Management", perms: ["View Lawyers", "Add Lawyer", "Edit Lawyer", "Delete Lawyer", "Verify Lawyer"] },
   { id: "subscriptions", name: "Subscription Management", perms: ["View Subscriptions", "Manage Subscriptions"] },
   { id: "notifications", name: "Notifications", perms: ["View Notifications", "Create Notifications"] },
   { id: "settings", name: "Settings", perms: ["View Settings", "Manage Settings"] }

@@ -1,0 +1,33 @@
+# CaseHub - Documentation
+
+Yeh folder batata hai ki ab tak project mein kya-kya bana hai, kaise kaam karta hai, aur APIs ko kaise call karna hai.
+
+| File | Kya hai |
+|---|---|
+| [01-project-overview.md](01-project-overview.md) | Poora project ek nazar mein: architecture, database tables, roles/permissions, security, setup, tests, aur jo abhi baaki hai |
+| [02-admin-panel.md](02-admin-panel.md) | Admin panel: login, forgot password, permissions, Clients/Lawyers management (suspend / approve), unke JSON endpoints |
+| [03-mobile-api.md](03-mobile-api.md) | Mobile app ki APIs (Client + Lawyer): register, OTP, login, forgot password. Har endpoint ka dummy request aur response |
+
+## Sabse pehle (setup)
+
+```bash
+composer install
+copy .env.example .env          # phir DB details bharo (DB_DATABASE=case_hub)
+php artisan key:generate
+php artisan migrate
+php artisan db:seed             # Super Admin role + Super Admin + practice areas
+php artisan storage:link        # profile photos ke liye
+php artisan serve               # http://127.0.0.1:8000
+```
+
+- Admin panel: `http://127.0.0.1:8000/` (login page).
+- Local Super Admin (sirf local mein seed hota hai): `admin@casehub.test` / `Password@123`.
+- Production mein pehla Super Admin banane ke liye: `php artisan admin:create-super`.
+- Tests chalane ke liye: `php vendor/bin/phpunit` (170 tests, alag in-memory database use hota hai, tumhara asli database nahi chhuta).
+
+## Zaroori baatein (production se pehle)
+
+1. `.env` mein `APP_DEBUG=false` rakho. `true` hone par error responses mein file paths aur stack trace dikhte hain (API ke 404 / 429 jaise errors mein bhi).
+2. HTTPS lagao aur `SESSION_SECURE_COOKIE=true` karo.
+3. SMS provider abhi choose nahi hua (details `01-project-overview.md` mein).
+4. `composer audit` chalao: packages mein security advisories dikh rahi hain, update plan karo.

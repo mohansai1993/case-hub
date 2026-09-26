@@ -33,7 +33,7 @@ class AuthorizationTest extends TestCase
         $this->actingAs(Admin::factory()->withPermissions(['clients.view'])->create(), 'admin');
 
         $this->get(route('admin.clients'))->assertOk();
-        $this->get(route('admin.client-details'))->assertOk();
+        $this->get(route('admin.client-details', \App\Models\User::factory()->create()->user_id))->assertOk();
         $this->get(route('admin.lawyers'))->assertForbidden();
         $this->get(route('admin.dashboard'))->assertForbidden();
         $this->get(route('admin.settings'))->assertForbidden();

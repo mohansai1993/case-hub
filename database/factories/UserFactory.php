@@ -2,22 +2,26 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserStatus;
+use App\Enums\UserType;
+use App\Enums\VerificationStatus;
+use App\Models\LawyerProfile;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * Factories bypass mass-assignment guards, so the protected columns
+ * (type, status, mobile_verified_at) can be set here directly.
+ *
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
+    public const PASSWORD = 'Password@123';
 
     /**
-     * Define the model's default state.
+     * Default: an active client whose mobile is already verified.
      *
      * @return array<string, mixed>
      */
@@ -26,20 +30,42 @@ class UserFactory extends Factory
         return [
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
-            'password' => static::$password ??= Hash::make('password'),
-            'role' => '0', // Default to regular user
-            'mobile' => fake()->optional()->phoneNumber(),
+            'password' => self::PASSWORD,
+            'role' => 0,
+            'type' => UserType::Client,
+            'status' => UserStatus::Active,
+            'mobile' => fake()->unique()->numerify('9#########'),
+            'mobile_verified_at' => now(),
             'remember_token' => Str::random(10),
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    public function lawyer(VerificationStatus $verification = VerificationStatus::Pending): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->state(['type' => UserType::Lawyer])
+            ->afterCreating(function (User $user) use ($verification) {
+                LawyerProfile::unguarded(fn () => LawyerProfile::create([
+                    'user_id' => $user->user_id,
+                    'location' => 'New Delhi, India',
+                    'years_of_experience' => 8,
+                    'bio' => 'Corporate governance and labour disputes.',
+                    'verification_status' => $verification,
+                ]));
+            });
+    }
+
+    public function unverifiedMobile(): static
+    {
+        return $this->state(['mobile_verified_at' => null]);
+    }
+
+    public function suspended(): static
+    {
+        return $this->state(['status' => UserStatus::Suspended]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(['status' => UserStatus::Inactive]);
     }
 }

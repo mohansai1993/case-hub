@@ -45,6 +45,14 @@ return [
             'provider' => 'users',
         ],
 
+        // Mobile API: Sanctum bearer tokens issued to clients and lawyers.
+        // The provider MUST be set explicitly; otherwise Sanctum falls back to
+        // the default guard's provider, which here is the admins table.
+        'sanctum' => [
+            'driver' => 'sanctum',
+            'provider' => 'users',
+        ],
+
         // Admin panel (Super Admin + staff). Separate provider/table so an app
         // user can never be authenticated into the panel by a flag or bug.
         'admin' => [

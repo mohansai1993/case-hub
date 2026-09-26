@@ -60,6 +60,36 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('password-reset', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
+
+        // ---- Mobile API ----------------------------------------------------
+
+        // Authenticated traffic is limited per user, anonymous per IP.
+        RateLimiter::for('api', fn (Request $request) => Limit::perMinute(60)
+            ->by($request->user('sanctum')?->getAuthIdentifier() ?: $request->ip()));
+
+        // Sign-ups: a person registers once; a script registers thousands.
+        RateLimiter::for('api-register', fn (Request $request) => [
+            Limit::perMinute(5)->by($request->ip()),
+            Limit::perHour(20)->by($request->ip()),
+        ]);
+
+        RateLimiter::for('api-login', fn (Request $request) => Limit::perMinute(20)->by($request->ip()));
+
+        // The OTP endpoints are the ones that cost money (SMS) and guard 4-digit
+        // codes, so they are limited both per IP and per target number.
+        $target = fn (Request $request) => sha1(strtolower((string) ($request->input('mobile') ?? $request->input('identifier'))) . '|' . $request->ip());
+
+        RateLimiter::for('api-otp-send', fn (Request $request) => [
+            Limit::perMinute(5)->by($request->ip()),
+            Limit::perHour(10)->by($target($request)),
+        ]);
+
+        RateLimiter::for('api-otp-verify', fn (Request $request) => [
+            Limit::perMinute(10)->by($request->ip()),
+            Limit::perHour(20)->by($target($request)),
+        ]);
+
+        RateLimiter::for('api-password-reset', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
     }
 
 }

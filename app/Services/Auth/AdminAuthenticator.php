@@ -5,17 +5,15 @@ namespace App\Services\Auth;
 use App\Exceptions\Auth\AccountInactive;
 use App\Exceptions\Auth\InvalidCredentials;
 use App\Models\Admin;
+use App\Support\DecoyPassword;
 use App\Support\Identifier;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AdminAuthenticator
 {
     /** "Remember me" lasts 30 days (framework default is ~400). */
     private const REMEMBER_MINUTES = 60 * 24 * 30;
-
-    private static ?string $decoyHash = null;
 
     public function __construct(private readonly AuthAuditLogger $audit)
     {
@@ -36,7 +34,7 @@ class AdminAuthenticator
 
         // Always run one hash comparison, even for an unknown account, so
         // response time does not reveal whether the account exists.
-        $passwordMatches = Hash::check($password, $admin?->password ?? $this->decoyHash());
+        $passwordMatches = DecoyPassword::check($password, $admin?->password);
 
         if (! $admin || ! $passwordMatches) {
             $this->audit->record(AuthAuditLogger::LOGIN_FAILED, $admin, $identifier);
@@ -80,8 +78,4 @@ class AdminAuthenticator
         }
     }
 
-    private function decoyHash(): string
-    {
-        return self::$decoyHash ??= Hash::make(Str::random(40));
-    }
 }
