@@ -47,8 +47,8 @@
           <tr>
             <td><strong>{{ $client->name }}</strong><small>{{ $client->reference() }}</small></td>
             <td>
-              {{ $client->email }}
-              <small>+91 {{ $client->mobile }}@unless ($client->hasVerifiedMobile()) &middot; mobile not verified @endunless</small>
+              {{ $client->email }}@unless ($client->hasVerifiedEmail()) &middot; not verified @endunless
+              <small>+91 {{ $client->mobile }}</small>
             </td>
             <td><span class="status status-{{ $client->status->value }}">{{ ucfirst($client->status->value) }}</span></td>
             <td>{{ $client->created_at->format('d M Y') }}</td>

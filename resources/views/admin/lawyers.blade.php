@@ -2,10 +2,17 @@
 
 @section('title', 'CaseHub Lawyers')
 
+@php $admin = auth('admin')->user(); @endphp
+
 @section('content')
-<div class="page-head">
-  <h1>Lawyers</h1>
-  <p>Manage all registered lawyer accounts.</p>
+<div class="page-head page-head-row">
+  <div>
+    <h1>Lawyers</h1>
+    <p>Manage all registered lawyer accounts.</p>
+  </div>
+  @if ($admin->hasPermission('lawyers.practice_areas'))
+    <a href="{{ route('admin.practice-areas.index') }}" class="btn-primary">Manage Specializations</a>
+  @endif
 </div>
 
 <section class="card list-card">
@@ -20,12 +27,6 @@
         <option value="">All Statuses</option>
         @foreach (\App\Enums\UserStatus::cases() as $status)
           <option value="{{ $status->value }}" @selected(($filters['status'] ?? null) === $status->value)>{{ ucfirst($status->value) }}</option>
-        @endforeach
-      </select>
-      <select name="verification" aria-label="Verification status" data-autosubmit>
-        <option value="">All Verifications</option>
-        @foreach (\App\Enums\VerificationStatus::cases() as $verification)
-          <option value="{{ $verification->value }}" @selected(($filters['verification'] ?? null) === $verification->value)>{{ ucfirst($verification->value) }}</option>
         @endforeach
       </select>
       <select name="practice_area" aria-label="Specialization" data-autosubmit>
@@ -49,34 +50,27 @@
           <th>Specialization</th>
           <th>Experience</th>
           <th>Account Status</th>
-          <th>Verification Status</th>
           <th>Joined Date</th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody>
         @forelse ($lawyers as $lawyer)
-          @php $verification = $lawyer->lawyerProfile?->verification_status; @endphp
           <tr>
             <td><strong>{{ $lawyer->name }}</strong><small>{{ $lawyer->lawyerProfile?->location }}</small></td>
             <td>
-              {{ $lawyer->email }}
-              <small>+91 {{ $lawyer->mobile }}@unless ($lawyer->hasVerifiedMobile()) &middot; mobile not verified @endunless</small>
+              {{ $lawyer->email }}@unless ($lawyer->hasVerifiedEmail()) &middot; not verified @endunless
+              <small>+91 {{ $lawyer->mobile }}</small>
             </td>
             <td>{{ $lawyer->practiceAreas->pluck('name')->join(', ') ?: '—' }}</td>
             <td>{{ $lawyer->lawyerProfile?->years_of_experience }} {{ \Illuminate\Support\Str::plural('yr', $lawyer->lawyerProfile?->years_of_experience ?? 0) }}</td>
             <td><span class="status status-{{ $lawyer->status->value }}">{{ ucfirst($lawyer->status->value) }}</span></td>
-            <td>
-              @if ($verification)
-                <span class="verify verify-{{ $verification->value }}">{{ ucfirst($verification->value) }}</span>
-              @endif
-            </td>
             <td>{{ $lawyer->created_at->format('d M Y') }}</td>
             <td><a href="{{ route('admin.lawyer-details', $lawyer->user_id) }}" class="btn-view">View</a></td>
           </tr>
         @empty
           <tr>
-            <td colspan="8"><p class="empty-msg">{{ $total ? 'No lawyers match your search.' : 'No lawyers have registered yet.' }}</p></td>
+            <td colspan="7"><p class="empty-msg">{{ $total ? 'No lawyers match your search.' : 'No lawyers have registered yet.' }}</p></td>
           </tr>
         @endforelse
       </tbody>

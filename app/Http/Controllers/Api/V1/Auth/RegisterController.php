@@ -30,7 +30,7 @@ class RegisterController extends Controller
     }
 
     /**
-     * The account exists but cannot log in until the mobile is verified; the
+     * The account exists but cannot log in until the email is verified; the
      * response tells the app to open the OTP screen.
      */
     private function respond(RegistrationResult $result): JsonResponse
@@ -39,7 +39,7 @@ class RegisterController extends Controller
 
         return response()->json([
             'message' => $result->otpSent
-                ? 'Account created. We have sent an OTP to your mobile number.'
+                ? 'Account created. We have sent an OTP to your email address.'
                 : 'Account created, but the OTP could not be sent. Please request a new one.',
             'data' => [
                 'user' => new UserResource($user),

@@ -57,8 +57,8 @@ class DemoDataSeeder extends Seeder
             ]);
         }
 
-        // One client who registered but never verified their mobile.
-        User::factory()->unverifiedMobile()->create([
+        // One client who registered but never verified their email.
+        User::factory()->unverifiedEmail()->create([
             'name' => 'Arjun Nair',
             'email' => 'client9@demo.casehub.test',
             'mobile' => '9810000009',

@@ -118,11 +118,11 @@ class RegistrationService
             });
     }
 
-    /** A failed SMS must not lose the account; the app offers "Resend OTP". */
+    /** A failed email must not lose the account; the app offers "Resend OTP". */
     private function sendVerificationOtp(User $user): bool
     {
         try {
-            return $this->otps->send($user, UserOtp::PURPOSE_VERIFY_MOBILE);
+            return $this->otps->send($user, UserOtp::PURPOSE_VERIFY_EMAIL, 'email');
         } catch (Throwable $e) {
             report($e);
 

@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\UserStatus;
-use App\Enums\VerificationStatus;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -36,11 +35,6 @@ class AccountListRequest extends FormRequest
     public function status(): ?UserStatus
     {
         return UserStatus::tryFrom((string) $this->query('status'));
-    }
-
-    public function verification(): ?VerificationStatus
-    {
-        return VerificationStatus::tryFrom((string) $this->query('verification'));
     }
 
     public function practiceArea(): ?int

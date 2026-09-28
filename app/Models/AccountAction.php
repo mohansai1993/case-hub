@@ -9,8 +9,6 @@ class AccountAction extends Model
 {
     public const SUSPENDED = 'suspended';
     public const ACTIVATED = 'activated';
-    public const LAWYER_APPROVED = 'lawyer_approved';
-    public const LAWYER_REJECTED = 'lawyer_rejected';
 
     public const UPDATED_AT = null;
 
@@ -31,8 +29,6 @@ class AccountAction extends Model
         return match ($this->action) {
             self::SUSPENDED => 'Account suspended',
             self::ACTIVATED => 'Account activated',
-            self::LAWYER_APPROVED => 'Lawyer approved',
-            self::LAWYER_REJECTED => 'Lawyer rejected',
             default => ucfirst(str_replace('_', ' ', $this->action)),
         };
     }

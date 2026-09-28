@@ -28,7 +28,7 @@ class NotRegistered implements ValidationRule
             ? Identifier::normalizeMobile($value)
             : mb_strtolower(trim($value));
 
-        if ($normalized !== null && User::whereNotNull('mobile_verified_at')->where($this->column, $normalized)->exists()) {
+        if ($normalized !== null && User::whereNotNull('email_verified_at')->where($this->column, $normalized)->exists()) {
             $fail($this->column === 'mobile'
                 ? 'This mobile number is already registered.'
                 : 'This email is already registered.');

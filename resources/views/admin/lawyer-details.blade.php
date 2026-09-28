@@ -6,9 +6,7 @@
 @php
   $admin = auth('admin')->user();
   $canModerate = $admin->hasPermission('lawyers.update');
-  $canVerify = $admin->hasPermission('lawyers.verify');
   $profile = $lawyer->lawyerProfile;
-  $verification = $profile->verification_status;
   $status = $lawyer->status;
 @endphp
 
@@ -30,7 +28,6 @@
       <h2 class="client-name">
         {{ $lawyer->name }}
         <span class="status status-{{ $status->value }}">{{ ucfirst($status->value) }}</span>
-        <span class="verify verify-{{ $verification->value }}">{{ ucfirst($verification->value) }}</span>
       </h2>
       <p class="client-sub">Lawyer ID: #{{ $lawyer->reference() }} &bull; {{ $profile->location }} &bull; {{ $profile->years_of_experience }} {{ \Illuminate\Support\Str::plural('year', $profile->years_of_experience) }} experience</p>
     </div>
@@ -56,11 +53,11 @@
       </div>
       <div class="info-item">
         <span>Email</span>
-        <a href="mailto:{{ $lawyer->email }}" class="info-link">{{ $lawyer->email }}</a>
+        <a href="mailto:{{ $lawyer->email }}" class="info-link">{{ $lawyer->email }}</a>{{ $lawyer->hasVerifiedEmail() ? '' : ' (not verified)' }}
       </div>
       <div class="info-item">
         <span>Phone Number</span>
-        <strong>+91 {{ $lawyer->mobile }}{{ $lawyer->hasVerifiedMobile() ? '' : ' (not verified)' }}</strong>
+        <strong>+91 {{ $lawyer->mobile }}</strong>
       </div>
       <div class="info-item">
         <span>Specialization</span>
@@ -78,16 +75,6 @@
         <span>Account Status</span>
         <strong><span class="status status-{{ $status->value }}">{{ ucfirst($status->value) }}</span></strong>
       </div>
-      <div class="info-item">
-        <span>Verification Status</span>
-        <strong><span class="verify verify-{{ $verification->value }}">{{ ucfirst($verification->value) }}</span></strong>
-      </div>
-      @if ($profile->verified_at)
-        <div class="info-item">
-          <span>Verified On</span>
-          <strong>{{ $profile->verified_at->format('d M Y') }}</strong>
-        </div>
-      @endif
     </div>
 
     @if ($profile->bio)
@@ -108,34 +95,20 @@
       <svg class="head-icon" viewBox="0 0 24 24"><circle cx="11" cy="8" r="4"/><path d="M3 21a8 8 0 0 1 11-7.4"/><circle cx="18" cy="17" r="3"/></svg>
     </div>
 
-    @if ($canModerate || $canVerify)
+    @if ($canModerate)
       <div class="inline-btns">
-        @if ($canModerate && $status !== \App\Enums\UserStatus::Suspended)
+        @if ($status !== \App\Enums\UserStatus::Suspended)
           <button type="button" class="btn-inline btn-danger-soft" data-moderate="suspend"
                   data-url="{{ route('admin.lawyers.suspend', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
             <svg viewBox="0 0 24 24"><path d="M12 3l9 16H3L12 3Z"/><path d="M12 10v4M12 17h.01"/></svg>
             Suspend Account
           </button>
         @endif
-        @if ($canModerate && $status !== \App\Enums\UserStatus::Active)
+        @if ($status !== \App\Enums\UserStatus::Active)
           <button type="button" class="btn-inline btn-block-primary" data-moderate="activate"
                   data-url="{{ route('admin.lawyers.activate', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
             Activate Account
-          </button>
-        @endif
-        @if ($canVerify && $verification !== \App\Enums\VerificationStatus::Verified)
-          <button type="button" class="btn-inline btn-block-primary" data-moderate="approve"
-                  data-url="{{ route('admin.lawyers.approve', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
-            <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4Z"/><path d="M9 12l2 2 4-4"/></svg>
-            Approve Lawyer
-          </button>
-        @endif
-        @if ($canVerify && $verification !== \App\Enums\VerificationStatus::Rejected)
-          <button type="button" class="btn-inline btn-danger-soft" data-moderate="reject"
-                  data-url="{{ route('admin.lawyers.reject', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/></svg>
-            Reject Lawyer
           </button>
         @endif
       </div>

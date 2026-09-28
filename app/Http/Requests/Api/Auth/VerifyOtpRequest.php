@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Api\Auth;
 
-/** Body: { "mobile": "...", "otp": "1234", "device_name"?: "..." } */
-class VerifyOtpRequest extends MobileRequest
+/** Body: { "email": "...", "otp": "1234", "device_name"?: "..." } */
+class VerifyOtpRequest extends EmailRequest
 {
     public function rules(): array
     {

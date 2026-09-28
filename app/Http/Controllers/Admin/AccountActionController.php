@@ -37,20 +37,6 @@ class AccountActionController extends Controller
         return $this->run(fn () => $this->moderation->activate($user, $request->user('admin')), 'Account activated.');
     }
 
-    public function approve(Request $request, string $id): JsonResponse
-    {
-        $user = $this->resolve($request, $id);
-
-        return $this->run(fn () => $this->moderation->approveLawyer($user, $request->user('admin')), 'Lawyer approved.');
-    }
-
-    public function reject(ReasonRequest $request, string $id): JsonResponse
-    {
-        $user = $this->resolve($request, $id);
-
-        return $this->run(fn () => $this->moderation->rejectLawyer($user, $request->user('admin'), $request->reason()), 'Lawyer rejected.');
-    }
-
     private function resolve(Request $request, string $id): User
     {
         return User::where('type', $request->route('type'))->findOrFail($id);
@@ -66,10 +52,7 @@ class AccountActionController extends Controller
 
         return response()->json([
             'message' => $successMessage,
-            'data' => [
-                'status' => $user->status->value,
-                'verification_status' => $user->lawyerProfile?->verification_status->value,
-            ],
+            'data' => ['status' => $user->status->value],
         ]);
     }
 }

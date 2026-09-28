@@ -14,7 +14,7 @@ Mobile app ke liye REST API. Register, OTP verify, login aur forgot password.
 
 ```
 REGISTER (Client ya Lawyer)
-   |  201: account bana, OTP SMS gaya (abhi token nahi)
+   |  201: account bana, OTP EMAIL par gaya (abhi token nahi)
    v
 VERIFY YOUR ACCOUNT  (4 digit OTP)
    |  200: account verify + token mil gaya  -> app mein login ho gaya
@@ -23,7 +23,7 @@ Home
 
 LOGIN (Client/Lawyer tab)
    |-- 200 -> token
-   |-- 403 mobile_not_verified -> OTP screen kholo (naya OTP apne aap chala gaya)
+   |-- 403 email_not_verified -> OTP screen kholo (naya OTP apne aap chala gaya)
    |-- 403 account_inactive    -> "account suspend hai" dikhao
    `-- 401 invalid_credentials -> "galat email/mobile ya password"
 
@@ -53,7 +53,7 @@ FORGOT PASSWORD:  forgot-password -> forgot-password/verify -> reset-password ->
 |---|---|---|---|
 | 401 | `invalid_credentials` | Galat email/mobile, password, ya galat tab (client ki jagah lawyer tab) | Error dikhao |
 | 401 | (no code) `Unauthenticated.` | Token nahi / galat / expire | Login screen par bhejo |
-| 403 | `mobile_not_verified` | Registration poori nahi hui | OTP screen kholo |
+| 403 | `email_not_verified` | Registration poori nahi hui (email verify nahi hua) | OTP screen kholo |
 | 403 | `account_inactive` | Account suspend / inactive | "Contact support" dikhao |
 | 422 | `invalid_otp` | OTP galat / expire / bahut galat guesses | Dobara try ya Resend |
 | 422 | `invalid_reset_token` | Password reset ka session expire | Forgot password dobara shuru karo |
@@ -77,7 +77,7 @@ Har jagah user aise dikhta hai:
   "email": "rahul@example.com",
   "mobile": "9876543210",
   "image_url": null,
-  "mobile_verified": true,
+  "email_verified": true,
   "status": "active"
 }
 ```
@@ -92,7 +92,7 @@ Lawyer ke liye extra `lawyer` object bhi aata hai (client mein nahi):
   "email": "sarah@lawfirm.com",
   "mobile": "9123456780",
   "image_url": "http://localhost/case-hub/public/storage/profile-photos/7UjjjSs0rwRIuyfApAuvs7Zzhx8hONs6rz2yJS6l.jpg",
-  "mobile_verified": true,
+  "email_verified": true,
   "status": "active",
   "lawyer": {
     "location": "New Delhi, India",
@@ -111,7 +111,7 @@ Lawyer ke liye extra `lawyer` object bhi aata hai (client mein nahi):
 |---|---|
 | `type` | `client`, `lawyer` |
 | `status` | `active`, `inactive`, `suspended` |
-| `lawyer.verification_status` | `pending` (admin review baaki), `verified`, `rejected` |
+| `lawyer.verification_status` | Hamesha `pending` rehta hai abhi - admin panel se isko badalne ka koi action nahi hai. `verified`/`rejected` values reserved hain future ke liye. |
 
 ---
 
@@ -180,7 +180,7 @@ Request:
 Response `201`:
 ```json
 {
-  "message": "Account created. We have sent an OTP to your mobile number.",
+  "message": "Account created. We have sent an OTP to your email address.",
   "data": {
     "user": {
       "id": "448dc022-5370-43e7-bc16-a60c8a77427e",
@@ -189,7 +189,7 @@ Response `201`:
       "email": "rahul@example.com",
       "mobile": "9876543210",
       "image_url": null,
-      "mobile_verified": false,
+      "email_verified": false,
       "status": "active"
     },
     "otp": {
@@ -204,7 +204,7 @@ Response `201`:
 
 - **Token nahi milta.** Account tab tak login nahi kar sakta jab tak OTP verify na ho.
 - `otp.resend_in`: kitne second baad "Resend OTP" chalega (screen ka 00:59 timer). `otp.expires_in`: OTP kitne second valid.
-- Agar SMS bhejna fail ho jaye toh bhi account bana rehta hai, `otp.sent` `false` aata hai. Tab bhi OTP screen dikhao aur user "Resend OTP" dabaye.
+- Agar email bhejna fail ho jaye toh bhi account bana rehta hai, `otp.sent` `false` aata hai. Tab bhi OTP screen dikhao aur user "Resend OTP" dabaye.
 
 Response `422` (galat data, sab galtiyan ek saath):
 ```json
@@ -228,7 +228,7 @@ Response `422` (galat data, sab galtiyan ek saath):
 Dusri baaton:
 - **Pehle se registered** (verified) email/mobile: `422` mein `errors.email` = `"This email is already registered."` ya `errors.mobile` = `"This mobile number is already registered."`.
 - Agar kisi ne kisi ka email/number **bina verify kiye** register kar diya ho, toh asli maalik ka naya registration us adhoore account ko replace kar deta hai (koi kisi ka number/email block nahi kar sakta).
-- `type`, `status`, `mobile_verified_at` request se set nahi ho sakte, bhejne par ignore hote hain.
+- `type`, `status`, `email_verified_at`, `mobile_verified_at` request se set nahi ho sakte, bhejne par ignore hote hain.
 
 ---
 
@@ -264,7 +264,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/auth/register/lawyer \
 Response `201`:
 ```json
 {
-  "message": "Account created. We have sent an OTP to your mobile number.",
+  "message": "Account created. We have sent an OTP to your email address.",
   "data": {
     "user": {
       "id": "afc82c9d-f4bf-4ece-9608-fe8aa3c904dc",
@@ -273,7 +273,7 @@ Response `201`:
       "email": "sarah@lawfirm.com",
       "mobile": "9123456780",
       "image_url": "http://localhost/case-hub/public/storage/profile-photos/7UjjjSs0rwRIuyfApAuvs7Zzhx8hONs6rz2yJS6l.jpg",
-      "mobile_verified": false,
+      "email_verified": false,
       "status": "active",
       "lawyer": {
         "location": "New Delhi, India",
@@ -291,7 +291,7 @@ Response `201`:
 }
 ```
 
-- Lawyer hamesha `verification_status: "pending"` se shuru hota hai. Admin approve karta hai. Lawyer khud verify nahi kar sakta (request mein `verification_status` bhejne par ignore).
+- Lawyer hamesha `verification_status: "pending"` se shuru hota hai aur abhi wahi rehta hai (admin panel se badalne ka koi action nahi hai). Lawyer khud bhi verify nahi kar sakta (request mein `verification_status` bhejne par ignore).
 - Photo galat ho toh `422`: `errors.photo` = `"The profile photo must be a JPG or PNG image."` ya `"The profile photo must not be larger than 5MB."`.
 - Practice area galat ho toh `errors.practice_areas.0` (galat index ke saath); khaali ho toh `"Please select at least one practice area."`.
 
@@ -304,7 +304,7 @@ Response `201`:
 Request:
 ```json
 {
-  "mobile": "9876543210",
+  "email": "rahul@example.com",
   "otp": "4821",
   "device_name": "Pixel 8"
 }
@@ -312,7 +312,7 @@ Request:
 
 | Field | Rule |
 |---|---|
-| `mobile` | registration wala number (koi bhi format) |
+| `email` | registration wala email |
 | `otp` | exactly 4 digit |
 | `device_name` | optional (default `mobile`), token ko pehchaanne ke liye |
 
@@ -328,7 +328,7 @@ Response `200` (account verify hua **aur user login bhi ho gaya**):
       "email": "rahul@example.com",
       "mobile": "9876543210",
       "image_url": null,
-      "mobile_verified": true,
+      "email_verified": true,
       "status": "active"
     },
     "token": "1|f14YhYkh0YG5xtG66nbUV6VRdYEtrmJMA8lXMOpQ26910579",
@@ -339,7 +339,7 @@ Response `200` (account verify hua **aur user login bhi ho gaya**):
 ```
 `token` ko app mein safe (secure storage) rakho aur aage `Authorization: Bearer <token>` mein bhejo.
 
-Response `422` (galat / expire / pehle hi use ho chuka / number registered nahi, sab ka jawab **ek jaisa**):
+Response `422` (galat / expire / pehle hi use ho chuka / email registered nahi, sab ka jawab **ek jaisa**):
 ```json
 {
   "message": "Invalid or expired OTP. Please try again or request a new one.",
@@ -356,17 +356,17 @@ Rules: OTP 10 minute valid, sirf ek baar chalta hai, **5 galat guesses ke baad k
 
 Request:
 ```json
-{ "mobile": "9876543210" }
+{ "email": "rahul@example.com" }
 ```
 
-Response `200` (**hamesha yahi**, number registered ho ya na ho, taaki koi pata na laga sake):
+Response `200` (**hamesha yahi**, email registered ho ya na ho, taaki koi pata na laga sake):
 ```json
 {
-  "message": "If a pending account exists for this number, an OTP has been sent.",
+  "message": "If a pending account exists for this email, an OTP has been sent.",
   "data": { "resend_in": 59 }
 }
 ```
-59 second ke andar dobara call karne par naya SMS nahi jaata (timer wahi rehta hai). Naya OTP purane ko replace karta hai.
+59 second ke andar dobara call karne par naya email nahi jaata (timer wahi rehta hai). Naya OTP purane ko replace karta hai.
 
 ---
 
@@ -403,7 +403,7 @@ Response `200`:
       "email": "rahul@example.com",
       "mobile": "9876543210",
       "image_url": null,
-      "mobile_verified": true,
+      "email_verified": true,
       "status": "active"
     },
     "token": "2|HO12HJDqjXkyQZbHmC7yC3giuyT6dUGT4ndJdOPJ77d4ea9f",
@@ -421,12 +421,12 @@ Response `401` (galat email/mobile, galat password, **ya galat tab**: lawyer ne 
 }
 ```
 
-Response `403` (password sahi hai par mobile verify nahi hua; server ne apne aap naya OTP bhej diya hai, app OTP screen kholo):
+Response `403` (password sahi hai par email verify nahi hua; server ne apne aap naya OTP bhej diya hai, app OTP screen kholo):
 ```json
 {
-  "message": "Please verify your mobile number to continue.",
-  "code": "mobile_not_verified",
-  "data": { "mobile": "9876543210", "resend_in": 59 }
+  "message": "Please verify your email to continue.",
+  "code": "email_not_verified",
+  "data": { "email": "rahul@example.com", "resend_in": 59 }
 }
 ```
 
@@ -474,7 +474,7 @@ Response `200`:
       "email": "rahul@example.com",
       "mobile": "9876543210",
       "image_url": null,
-      "mobile_verified": true,
+      "email_verified": true,
       "status": "active"
     }
   }
@@ -517,7 +517,7 @@ Response `200`:
 
 ### 4.10 `POST /auth/forgot-password`
 
-Login screen ka "Forgot Password?". Email **ya** mobile de sakte ho, par OTP hamesha **us account ke registered mobile** par jaata hai.
+Login screen ka "Forgot Password?". Email **ya** mobile de sakte ho, par OTP hamesha **us account ke registered mobile** par jaata hai (SMS se) - ye registration-verify wali email OTP se alag flow hai.
 
 Request:
 ```json
@@ -601,9 +601,10 @@ Response `422` (token galat / expire / pehle use ho gaya):
 
 ## 5. Kuch aur zaroori baatein
 
-- **OTP SMS:** abhi SMS provider nahi laga. Development mein OTP `storage/logs/laravel.log` mein is tarah dikhta hai: `[sms:log] to 9876543210: CaseHub: 4821 is your verification code. ...`. Production mein log gateway error deta hai jab tak asli provider na jude.
+- **Registration OTP ab EMAIL se jaata hai** (`MAIL_MAILER` config se). Forgot-password ka OTP abhi bhi **mobile par SMS** se jaata hai - do alag delivery channels hain.
+- **Dev mein dekhne ka tareeka:** `MAIL_MAILER=log` ho toh registration ka OTP `storage/logs/laravel.log` mein mail ki tarah dikhta hai (subject "Your CaseHub verification code"). SMS provider abhi nahi laga hai, isliye forgot-password ka OTP bhi (dev mein) `[sms:log] to 9876543210: ...` is tarah log mein hi dikhta hai. Production mein ye dono asli provider (SMTP / SMS gateway) na jude toh error dete hain.
 - **Photo URL:** `image_url` ek poora URL hota hai (`APP_URL` par based). Photo dikhne ke liye `php artisan storage:link` ek baar chalana zaroori hai.
-- **Admin ka asar:** admin panel se client/lawyer suspend hote hi uske saare tokens delete ho jaate hain, aur woh dobara login nahi kar sakta (`403 account_inactive`) jab tak admin activate na kare. Lawyer ka `verification_status` admin badalta hai; app ko bas `GET /auth/me` se naya status milta hai.
+- **Admin ka asar:** admin panel se client/lawyer suspend hote hi uske saare tokens delete ho jaate hain, aur woh dobara login nahi kar sakta (`403 account_inactive`) jab tak admin activate na kare. Dono, Client aur Lawyer, ke liye admin ke paas yehi ek control hai (Suspend/Activate) - lawyer ka `verification_status` admin se ab manage nahi hota.
 - **`APP_DEBUG=false` production mein zaroori:** `true` hone par error responses mein file path aur stack trace bhi aa jaate hain. Upar ke examples `false` waali (safe) shape dikhate hain.
 - **Token kitne der:** normal 7 din, `remember: true` par 30 din (`.env` se badal sakte ho).
 
@@ -618,7 +619,7 @@ curl -X POST http://127.0.0.1:8000/api/v1/auth/register/client \
 # 2) storage/logs/laravel.log mein OTP dekho, phir verify
 curl -X POST http://127.0.0.1:8000/api/v1/auth/otp/verify \
   -H "Accept: application/json" -H "Content-Type: application/json" \
-  -d '{"mobile":"9876543210","otp":"4821"}'
+  -d '{"email":"rahul@example.com","otp":"4821"}'
 
 # 3) Token se profile
 curl http://127.0.0.1:8000/api/v1/auth/me \

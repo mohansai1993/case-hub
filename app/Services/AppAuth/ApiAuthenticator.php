@@ -4,8 +4,8 @@ namespace App\Services\AppAuth;
 
 use App\Enums\UserType;
 use App\Exceptions\Auth\AccountInactive;
+use App\Exceptions\Auth\EmailNotVerified;
 use App\Exceptions\Auth\InvalidCredentials;
-use App\Exceptions\Auth\MobileNotVerified;
 use App\Models\User;
 use App\Support\DecoyPassword;
 use App\Support\Identifier;
@@ -21,7 +21,7 @@ class ApiAuthenticator
      *
      * @throws InvalidCredentials  unknown account, wrong password or wrong tab (indistinguishable)
      * @throws AccountInactive     deactivated / suspended (only after the password was right)
-     * @throws MobileNotVerified   registration not completed (only after the password was right)
+     * @throws EmailNotVerified    registration not completed (only after the password was right)
      */
     public function attempt(UserType $type, ?Identifier $identifier, string $password): User
     {
@@ -39,8 +39,8 @@ class ApiAuthenticator
             throw new AccountInactive;
         }
 
-        if (! $user->hasVerifiedMobile()) {
-            throw new MobileNotVerified($user);
+        if (! $user->hasVerifiedEmail()) {
+            throw new EmailNotVerified($user);
         }
 
         if (Hash::needsRehash($user->password)) {

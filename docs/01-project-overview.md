@@ -7,7 +7,7 @@ Ab tak jo **bana hua hai**:
 1. Admin panel ka design (Figma ke hisab se) Blade layout mein.
 2. Admin panel ka **authentication** (login, forgot password OTP, logout) + **roles/permissions**.
 3. Mobile app ki **APIs**: Client/Lawyer register, OTP verify, login, forgot password.
-4. Admin panel mein **Clients aur Lawyers ka management**: list, details, suspend / activate, lawyer approve / reject.
+4. Admin panel mein **Clients aur Lawyers ka management**: list, details, suspend / activate (dono ke liye same, ek hi type ka control - lawyer ke liye alag se "approve/reject verification" nahi hai).
 
 Jo **abhi baaki** hai woh sabse neeche "Kya baaki hai" mein hai.
 
@@ -51,7 +51,7 @@ Permissions ki list ek jagah hai: [`config/permissions.php`](../config/permissio
 |---|---|
 | Dashboard | `dashboard.view` |
 | Clients | `clients.view`, `clients.create`, `clients.update`, `clients.delete` |
-| Lawyers | `lawyers.view`, `lawyers.create`, `lawyers.update`, `lawyers.delete`, `lawyers.verify` |
+| Lawyers | `lawyers.view`, `lawyers.create`, `lawyers.update`, `lawyers.delete`, `lawyers.practice_areas` |
 | Subscriptions | `subscriptions.view`, `subscriptions.manage` |
 | Notifications | `notifications.view`, `notifications.create` |
 | Settings | `settings.view`, `settings.manage` |
@@ -88,12 +88,12 @@ Migrations `database/migrations/` mein hain.
 | `role_permissions` | Role ko diye gaye permission keys (`role_id`, `permission`) |
 | `admin_password_resets` | Admin ke forgot-password OTP + reset token (sirf hash) |
 | `admin_auth_logs` | Admin login/logout/OTP events ka audit trail |
-| `users` | App ke accounts: Client + Lawyer. Extra columns: `type` (client/lawyer), `status` (active/inactive/suspended), `mobile_verified_at`, `terms_accepted_at` |
-| `lawyer_profiles` | Lawyer ki extra details: `location`, `years_of_experience`, `bio`, `verification_status` (pending/verified/rejected), `verified_at` |
+| `users` | App ke accounts: Client + Lawyer. Extra columns: `type` (client/lawyer), `status` (active/inactive/suspended), `email_verified_at` (registration OTP se), `mobile_verified_at` (abhi unused), `terms_accepted_at` |
+| `lawyer_profiles` | Lawyer ki extra details: `location`, `years_of_experience`, `bio`, `verification_status` (registration se hamesha `pending`, admin ke paas ab isko badalne ka koi action nahi hai), `verified_at` |
 | `practice_areas` | Specialization list (Severance, Compliance, ...) |
 | `lawyer_practice_area` | Lawyer <-> practice area link |
-| `user_otps` | App users ke OTP (mobile verify + forgot password), sirf hash |
-| `account_actions` | Admin ne kis client/lawyer par kya action kiya (suspend, activate, approve, reject) aur reason |
+| `user_otps` | App users ke OTP (registration ka email verify + forgot password ka mobile SMS), sirf hash |
+| `account_actions` | Admin ne kis client/lawyer par kya action kiya (suspend, activate) aur reason |
 | `personal_access_tokens` | Sanctum ke mobile tokens |
 | `sessions`, `cache`, `jobs` ... | Laravel ke standard tables. `sessions.user_id` ko string kiya gaya (UUID ke liye). |
 
@@ -182,9 +182,9 @@ Tests apne alag in-memory database par chalte hain, tumhare `case_hub` database 
 
 **Business rules jo tumne define nahi kiye (maine ye maana hai, badalna ho toh bata dena):**
 
-1. Pending (unverified) lawyer bhi login kar sakta hai; response mein `verification_status` aata hai. Unhe kya karne dena hai, yeh rule tum batao.
-2. Client ke liye "Approve" ka matlab "Activate Account" rakha hai. Lawyer ke liye "Approve" = verification.
-3. Registration ke baad account tab tak login nahi kar sakta jab tak mobile OTP verify na ho.
+1. Pending (unverified) lawyer bhi login kar sakta hai; response mein `verification_status` aata hai (hamesha `pending`, admin isko badal nahi sakta - sirf mobile API ke liye field maujood hai).
+2. Client aur Lawyer dono ke liye admin ke paas sirf ek hi type ka account control hai: Suspend / Activate. Lawyer ke liye alag se "verification approve/reject" nahi hai.
+3. Registration ke baad account tab tak login nahi kar sakta jab tak email OTP verify na ho (pehle mobile SMS se tha, ab email se hota hai).
 4. Mobile number Indian format (10 digit, 6-9 se shuru; `+91` chalta hai).
 5. Password kam se kam 8 akshar (design mein 6 tha; legal data ke hisab se sakht rakha).
 

@@ -22,11 +22,12 @@ use Throwable;
 class UserOtpService
 {
     /**
-     * Sends a fresh code by SMS unless one was sent within the resend window.
+     * Sends a fresh code unless one was sent within the resend window.
      *
-     * @return bool true if an SMS went out, false if we are still in cooldown
+     * @param  'email'|'sms'  $via
+     * @return bool true if it went out, false if we are still in cooldown
      */
-    public function send(User $user, string $purpose): bool
+    public function send(User $user, string $purpose, string $via = 'sms'): bool
     {
         $existing = UserOtp::where('user_id', $user->getKey())->where('purpose', $purpose)->first();
 
@@ -50,7 +51,7 @@ class UserOtpService
         );
 
         try {
-            $user->notify(new VerificationCode($code));
+            $user->notify(new VerificationCode($code, $via));
         } catch (Throwable $e) {
             // Nothing was delivered: free the user from the resend cooldown.
             $otp->delete();

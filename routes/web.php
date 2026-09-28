@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\LawyerController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\PracticeAreaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -78,22 +79,24 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
                 ->defaults('type', 'client')->whereUuid('id')->name('clients.activate');
         });
 
-        // Lawyers: same, plus lawyers.verify for the approve / reject decision.
+        // Lawyers: same account controls as clients (no separate verification step).
         Route::middleware('permission:lawyers.view')->group(function () {
             Route::get('/lawyers', [LawyerController::class, 'index'])->name('lawyers');
             Route::get('/lawyers/{id}', [LawyerController::class, 'show'])->whereUuid('id')->name('lawyer-details');
+        });
+        // The specialization chips lawyers pick from at registration.
+        Route::middleware('permission:lawyers.practice_areas')->prefix('practice-areas')->name('practice-areas.')->group(function () {
+            Route::get('/', [PracticeAreaController::class, 'index'])->name('index');
+            Route::post('/', [PracticeAreaController::class, 'store'])->name('store');
+            Route::put('/{practiceArea}', [PracticeAreaController::class, 'update'])->name('update');
+            Route::post('/{practiceArea}/toggle', [PracticeAreaController::class, 'toggle'])->name('toggle');
+            Route::delete('/{practiceArea}', [PracticeAreaController::class, 'destroy'])->name('destroy');
         });
         Route::middleware('permission:lawyers.update')->group(function () {
             Route::post('/lawyers/{id}/suspend', [AccountActionController::class, 'suspend'])
                 ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.suspend');
             Route::post('/lawyers/{id}/activate', [AccountActionController::class, 'activate'])
                 ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.activate');
-        });
-        Route::middleware('permission:lawyers.verify')->group(function () {
-            Route::post('/lawyers/{id}/approve', [AccountActionController::class, 'approve'])
-                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.approve');
-            Route::post('/lawyers/{id}/reject', [AccountActionController::class, 'reject'])
-                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.reject');
         });
 
         Route::middleware('permission:subscriptions.view')->group(function () {

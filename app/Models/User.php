@@ -126,9 +126,10 @@ class User extends Authenticatable
         return mb_strtoupper(mb_substr($parts[0] ?? '', 0, 1) . mb_substr($parts[1] ?? '', 0, 1));
     }
 
+    /** Registrations that never completed email verification: disposable, see RegistrationService. */
     public function scopeUnverified(Builder $query): Builder
     {
-        return $query->whereNull('mobile_verified_at');
+        return $query->whereNull('email_verified_at');
     }
 
     public static function findByIdentifier(Identifier $identifier): ?self
@@ -156,6 +157,12 @@ class User extends Authenticatable
     public function hasVerifiedMobile(): bool
     {
         return $this->mobile_verified_at !== null;
+    }
+
+    /** The gate for login / password reset: registration is completed by verifying the email. */
+    public function hasVerifiedEmail(): bool
+    {
+        return $this->email_verified_at !== null;
     }
 
     public function imageUrl(): ?string

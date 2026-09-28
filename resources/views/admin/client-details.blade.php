@@ -27,10 +27,10 @@
       <p class="client-sub">Client ID: #{{ $client->reference() }}</p>
     </div>
   </div>
-  @if ($client->hasVerifiedMobile())
+  @if ($client->hasVerifiedEmail())
     <span class="verified-pill">
       <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4Z"/><path d="M9 12l2 2 4-4"/></svg>
-      Mobile Verified
+      Email Verified
     </span>
   @endif
 </section>
@@ -73,8 +73,8 @@
           <strong>{{ $client->created_at->format('d M Y') }}</strong>
         </div>
         <div class="info-item">
-          <span>Mobile Verified</span>
-          <strong>{{ $client->hasVerifiedMobile() ? $client->mobile_verified_at->format('d M Y') : 'Not verified' }}</strong>
+          <span>Email Verified</span>
+          <strong>{{ $client->hasVerifiedEmail() ? $client->email_verified_at->format('d M Y') : 'Not verified' }}</strong>
         </div>
       </div>
     </section>

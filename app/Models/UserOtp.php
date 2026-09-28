@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UserOtp extends Model
 {
-    public const PURPOSE_VERIFY_MOBILE = 'verify_mobile';
+    public const PURPOSE_VERIFY_EMAIL = 'verify_email';
     public const PURPOSE_RESET_PASSWORD = 'reset_password';
 
     protected $guarded = [];

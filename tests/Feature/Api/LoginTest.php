@@ -76,12 +76,12 @@ class LoginTest extends ApiTestCase
     public function test_unverified_account_is_sent_to_the_otp_screen_after_a_correct_password(): void
     {
         Notification::fake();
-        $user = User::factory()->unverifiedMobile()->create(['email' => 'rahul@example.com']);
+        $user = User::factory()->unverifiedEmail()->create(['email' => 'rahul@example.com']);
 
         $this->login()
             ->assertStatus(403)
-            ->assertJsonPath('code', 'mobile_not_verified')
-            ->assertJsonPath('data.mobile', $user->mobile)
+            ->assertJsonPath('code', 'email_not_verified')
+            ->assertJsonPath('data.email', $user->email)
             ->assertJsonMissingPath('data.token');
 
         Notification::assertSentTo($user, VerificationCode::class);
@@ -91,7 +91,7 @@ class LoginTest extends ApiTestCase
     public function test_unverified_status_is_not_revealed_for_a_wrong_password(): void
     {
         Notification::fake();
-        User::factory()->unverifiedMobile()->create(['email' => 'rahul@example.com']);
+        User::factory()->unverifiedEmail()->create(['email' => 'rahul@example.com']);
 
         $this->login(['password' => 'Wrong@12345'])->assertStatus(401)->assertJsonPath('code', 'invalid_credentials');
 

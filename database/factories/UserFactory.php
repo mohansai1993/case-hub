@@ -21,7 +21,7 @@ class UserFactory extends Factory
     public const PASSWORD = 'Password@123';
 
     /**
-     * Default: an active client whose mobile is already verified.
+     * Default: an active client whose email is already verified.
      *
      * @return array<string, mixed>
      */
@@ -36,6 +36,7 @@ class UserFactory extends Factory
             'status' => UserStatus::Active,
             'mobile' => fake()->unique()->numerify('9#########'),
             'mobile_verified_at' => now(),
+            'email_verified_at' => now(),
             'remember_token' => Str::random(10),
         ];
     }
@@ -54,9 +55,9 @@ class UserFactory extends Factory
             });
     }
 
-    public function unverifiedMobile(): static
+    public function unverifiedEmail(): static
     {
-        return $this->state(['mobile_verified_at' => null]);
+        return $this->state(['email_verified_at' => null, 'mobile_verified_at' => null]);
     }
 
     public function suspended(): static

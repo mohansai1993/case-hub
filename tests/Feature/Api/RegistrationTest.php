@@ -2,13 +2,13 @@
 
 namespace Tests\Feature\Api;
 
-use App\Contracts\SmsGateway;
 use App\Enums\UserStatus;
 use App\Enums\UserType;
 use App\Models\PracticeArea;
 use App\Models\User;
-use App\Notifications\Channels\SmsChannel;
 use App\Notifications\VerificationCode;
+use Illuminate\Contracts\Mail\Factory as MailFactory;
+use Illuminate\Contracts\Mail\Mailer;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -35,7 +35,7 @@ class RegistrationTest extends ApiTestCase
         ], $override);
     }
 
-    public function test_client_can_register_and_is_asked_to_verify_the_mobile(): void
+    public function test_client_can_register_and_is_asked_to_verify_the_email(): void
     {
         Notification::fake();
 
@@ -43,7 +43,7 @@ class RegistrationTest extends ApiTestCase
             ->assertCreated()
             ->assertJsonPath('data.user.type', 'client')
             ->assertJsonPath('data.user.mobile', '9876543210')
-            ->assertJsonPath('data.user.mobile_verified', false)
+            ->assertJsonPath('data.user.email_verified', false)
             ->assertJsonPath('data.otp.sent', true)
             ->assertJsonPath('data.otp.length', 4)
             ->assertJsonPath('data.otp.resend_in', 59)
@@ -53,11 +53,11 @@ class RegistrationTest extends ApiTestCase
         $user = User::firstWhere('email', 'rahul@example.com');
         $this->assertSame(UserType::Client, $user->type);
         $this->assertSame(UserStatus::Active, $user->status);
-        $this->assertNull($user->mobile_verified_at);
+        $this->assertNull($user->email_verified_at);
         $this->assertNotNull($user->terms_accepted_at);
         $this->assertTrue(Hash::check(self::PASSWORD, $user->password));
 
-        Notification::assertSentTo($user, VerificationCode::class, fn ($n, $channels) => $channels === [SmsChannel::class]);
+        Notification::assertSentTo($user, VerificationCode::class, fn ($n, $channels) => $channels === ['mail']);
     }
 
     public function test_mobile_and_email_are_normalised(): void
@@ -116,6 +116,7 @@ class RegistrationTest extends ApiTestCase
             'type' => 'lawyer',
             'status' => 'suspended',
             'mobile_verified_at' => now()->toDateTimeString(),
+            'email_verified_at' => now()->toDateTimeString(),
             'role' => 1,
             'is_verified' => true,
         ]))->assertCreated();
@@ -124,6 +125,7 @@ class RegistrationTest extends ApiTestCase
         $this->assertSame(UserType::Client, $user->type);
         $this->assertSame(UserStatus::Active, $user->status);
         $this->assertNull($user->mobile_verified_at);
+        $this->assertNull($user->email_verified_at);
         $this->assertSame(0, $user->role);
         $this->assertFalse($user->is_verified);
     }
@@ -223,13 +225,18 @@ class RegistrationTest extends ApiTestCase
         Storage::disk('public')->assertMissing($stalePhoto);
     }
 
-    public function test_the_account_survives_a_failed_sms(): void
+    public function test_the_account_survives_a_failed_email(): void
     {
-        $this->app->bind(SmsGateway::class, fn () => new class implements SmsGateway {
-            public function send(string $mobile, string $message): void
-            {
-                throw new RuntimeException('gateway down');
-            }
+        $brokenMailer = new class implements Mailer {
+            public function to($users) { return $this; }
+            public function bcc($users) { return $this; }
+            public function raw($text, $callback) { throw new RuntimeException('mail down'); }
+            public function send($view, array $data = [], $callback = null) { throw new RuntimeException('mail down'); }
+            public function sendNow($mailable, array $data = [], $callback = null) { throw new RuntimeException('mail down'); }
+        };
+        $this->app->bind(MailFactory::class, fn () => new class($brokenMailer) implements MailFactory {
+            public function __construct(private readonly Mailer $mailer) {}
+            public function mailer($name = null) { return $this->mailer; }
         });
 
         $this->postJson(self::CLIENT, $this->clientPayload())

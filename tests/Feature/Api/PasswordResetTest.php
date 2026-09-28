@@ -72,7 +72,7 @@ class PasswordResetTest extends ApiTestCase
 
     public function test_the_answer_is_identical_for_unknown_and_unverified_accounts(): void
     {
-        User::factory()->unverifiedMobile()->create(['email' => 'pending@example.com', 'mobile' => '9555555555']);
+        User::factory()->unverifiedEmail()->create(['email' => 'pending@example.com', 'mobile' => '9555555555']);
 
         $known = $this->postJson(self::SEND, ['identifier' => 'rahul@example.com'])->json();
         $unknown = $this->postJson(self::SEND, ['identifier' => 'nobody@example.com'])->json();

@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Auth\MobileRequest;
+use App\Http\Requests\Api\Auth\EmailRequest;
 use App\Http\Requests\Api\Auth\VerifyOtpRequest;
 use App\Http\Resources\UserResource;
 use App\Services\AppAuth\AccountVerificationService;
@@ -21,7 +21,7 @@ class OtpController extends Controller
 
     public function verify(VerifyOtpRequest $request): JsonResponse
     {
-        $user = $this->verification->verify($request->mobile(), $request->string('otp')->toString());
+        $user = $this->verification->verify($request->email(), $request->string('otp')->toString());
 
         if (! $user) {
             return response()->json([
@@ -44,13 +44,13 @@ class OtpController extends Controller
         ]);
     }
 
-    /** Same answer whether or not the number is registered. */
-    public function resend(MobileRequest $request): JsonResponse
+    /** Same answer whether or not the email is registered. */
+    public function resend(EmailRequest $request): JsonResponse
     {
-        $this->verification->resend($request->mobile());
+        $this->verification->resend($request->email());
 
         return response()->json([
-            'message' => 'If a pending account exists for this number, an OTP has been sent.',
+            'message' => 'If a pending account exists for this email, an OTP has been sent.',
             'data' => ['resend_in' => (int) config('otp.app.resend_after')],
         ]);
     }

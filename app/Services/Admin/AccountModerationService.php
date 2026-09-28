@@ -3,7 +3,6 @@
 namespace App\Services\Admin;
 
 use App\Enums\UserStatus;
-use App\Enums\VerificationStatus;
 use App\Exceptions\InvalidStateTransition;
 use App\Models\AccountAction;
 use App\Models\Admin;
@@ -53,42 +52,6 @@ class AccountModerationService
         });
     }
 
-    public function approveLawyer(User $lawyer, Admin $by): User
-    {
-        return $this->transition($lawyer, function (User $locked) use ($by) {
-            $profile = $this->lawyerProfile($locked);
-
-            if ($profile->verification_status === VerificationStatus::Verified) {
-                throw new InvalidStateTransition('This lawyer is already verified.');
-            }
-
-            $from = $profile->verification_status;
-            $profile->verification_status = VerificationStatus::Verified;
-            $profile->verified_at = now();
-            $profile->save();
-
-            $this->record($locked, $by, AccountAction::LAWYER_APPROVED, $from->value, VerificationStatus::Verified->value);
-        });
-    }
-
-    public function rejectLawyer(User $lawyer, Admin $by, string $reason): User
-    {
-        return $this->transition($lawyer, function (User $locked) use ($by, $reason) {
-            $profile = $this->lawyerProfile($locked);
-
-            if ($profile->verification_status === VerificationStatus::Rejected) {
-                throw new InvalidStateTransition('This lawyer is already rejected.');
-            }
-
-            $from = $profile->verification_status;
-            $profile->verification_status = VerificationStatus::Rejected;
-            $profile->verified_at = null;
-            $profile->save();
-
-            $this->record($locked, $by, AccountAction::LAWYER_REJECTED, $from->value, VerificationStatus::Rejected->value, $reason);
-        });
-    }
-
     /** @param  callable(User): void  $change */
     private function transition(User $user, callable $change): User
     {
@@ -99,15 +62,6 @@ class AccountModerationService
 
             return $locked->refresh();
         });
-    }
-
-    private function lawyerProfile(User $user): \App\Models\LawyerProfile
-    {
-        if (! $user->isLawyer() || ! $user->lawyerProfile) {
-            throw new InvalidStateTransition('This account is not a lawyer.');
-        }
-
-        return $user->lawyerProfile;
     }
 
     private function record(User $user, Admin $by, string $action, ?string $from, ?string $to, ?string $reason = null): void

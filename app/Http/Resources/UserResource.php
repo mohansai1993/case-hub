@@ -18,7 +18,7 @@ class UserResource extends JsonResource
             'email' => $this->email,
             'mobile' => $this->mobile,
             'image_url' => $this->imageUrl(),
-            'mobile_verified' => $this->hasVerifiedMobile(),
+            'email_verified' => $this->hasVerifiedEmail(),
             'status' => $this->status->value,
             'lawyer' => $this->when($this->isLawyer(), fn () => $this->lawyerDetails()),
         ];

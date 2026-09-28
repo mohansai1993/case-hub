@@ -64,6 +64,6 @@ class AppPasswordResetService
     {
         $user = User::findByIdentifier($identifier);
 
-        return $user && $user->isActive() && $user->hasVerifiedMobile() ? $user : null;
+        return $user && $user->isActive() && $user->hasVerifiedEmail() ? $user : null;
     }
 }

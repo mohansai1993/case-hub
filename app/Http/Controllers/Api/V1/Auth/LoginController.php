@@ -3,8 +3,8 @@
 namespace App\Http\Controllers\Api\V1\Auth;
 
 use App\Exceptions\Auth\AccountInactive;
+use App\Exceptions\Auth\EmailNotVerified;
 use App\Exceptions\Auth\InvalidCredentials;
-use App\Exceptions\Auth\MobileNotVerified;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Resources\UserResource;
@@ -46,17 +46,17 @@ class LoginController extends Controller
                 'message' => 'Your account is not active. Please contact support.',
                 'code' => 'account_inactive',
             ], 403);
-        } catch (MobileNotVerified $e) {
+        } catch (EmailNotVerified $e) {
             // Password was right but registration was never finished: send a
             // fresh code (subject to the resend cooldown) and let the app open
             // the OTP screen.
             $this->sendVerificationOtp($e);
 
             return response()->json([
-                'message' => 'Please verify your mobile number to continue.',
-                'code' => 'mobile_not_verified',
+                'message' => 'Please verify your email to continue.',
+                'code' => 'email_not_verified',
                 'data' => [
-                    'mobile' => $e->user->mobile,
+                    'email' => $e->user->email,
                     'resend_in' => (int) config('otp.app.resend_after'),
                 ],
             ], 403);
@@ -100,10 +100,10 @@ class LoginController extends Controller
         return response()->json(['message' => 'Logged out from all devices.']);
     }
 
-    private function sendVerificationOtp(MobileNotVerified $e): void
+    private function sendVerificationOtp(EmailNotVerified $e): void
     {
         try {
-            $this->otps->send($e->user, UserOtp::PURPOSE_VERIFY_MOBILE);
+            $this->otps->send($e->user, UserOtp::PURPOSE_VERIFY_EMAIL, 'email');
         } catch (Throwable $error) {
             report($error);
         }

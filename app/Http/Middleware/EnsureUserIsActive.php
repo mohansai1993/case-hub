@@ -16,7 +16,7 @@ class EnsureUserIsActive
     {
         $user = $request->user('sanctum');
 
-        if (! $user || ! $user->isActive() || ! $user->hasVerifiedMobile()) {
+        if (! $user || ! $user->isActive() || ! $user->hasVerifiedEmail()) {
             return response()->json([
                 'message' => 'Your account is not active. Please contact support.',
                 'code' => 'account_inactive',

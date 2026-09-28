@@ -92,18 +92,15 @@ class AccountModerationTest extends TestCase
             ->assertSee('Showing 16 to 17 of 17 registered clients');
     }
 
-    public function test_lawyer_list_filters_by_verification_status_and_specialization(): void
+    public function test_lawyer_list_filters_by_specialization(): void
     {
         $severance = PracticeArea::firstWhere('slug', 'severance');
-        $pending = User::factory()->lawyer()->create(['name' => 'Pending Lawyer']);
-        $verified = User::factory()->lawyer(VerificationStatus::Verified)->create(['name' => 'Verified Lawyer']);
-        $verified->practiceAreas()->attach($severance->id);
-
-        $this->asSuper()->get(route('admin.lawyers', ['verification' => 'pending']))
-            ->assertSee('Pending Lawyer')->assertDontSee('Verified Lawyer');
+        $unrelated = User::factory()->lawyer()->create(['name' => 'Unrelated Lawyer']);
+        $matched = User::factory()->lawyer()->create(['name' => 'Severance Lawyer']);
+        $matched->practiceAreas()->attach($severance->id);
 
         $this->asSuper()->get(route('admin.lawyers', ['practice_area' => $severance->id]))
-            ->assertSee('Verified Lawyer')->assertSee('Severance')->assertDontSee('Pending Lawyer');
+            ->assertSee('Severance Lawyer')->assertSee('Severance')->assertDontSee('Unrelated Lawyer');
     }
 
     public function test_lists_and_details_need_the_view_permission(): void
@@ -287,66 +284,6 @@ class AccountModerationTest extends TestCase
     }
 
     // ---- Lawyer verification --------------------------------------------------------------
-
-    public function test_approving_a_lawyer_verifies_them(): void
-    {
-        $lawyer = User::factory()->lawyer()->create();
-
-        $this->asSuper()->postJson(route('admin.lawyers.approve', $lawyer->user_id))
-            ->assertOk()->assertJsonPath('data.verification_status', 'verified');
-
-        $profile = $lawyer->fresh()->lawyerProfile;
-        $this->assertSame(VerificationStatus::Verified, $profile->verification_status);
-        $this->assertNotNull($profile->verified_at);
-
-        $log = AccountAction::firstWhere('user_id', $lawyer->user_id);
-        $this->assertSame('lawyer_approved', $log->action);
-        $this->assertSame('pending', $log->from_status);
-        $this->assertSame('verified', $log->to_status);
-    }
-
-    public function test_rejecting_a_lawyer_needs_a_reason_and_clears_verification(): void
-    {
-        $lawyer = User::factory()->lawyer(VerificationStatus::Verified)->create();
-
-        $this->asSuper()->postJson(route('admin.lawyers.reject', $lawyer->user_id), [])->assertUnprocessable()->assertJsonValidationErrors('reason');
-
-        $this->asSuper()->postJson(route('admin.lawyers.reject', $lawyer->user_id), ['reason' => 'Bar number could not be verified'])
-            ->assertOk()->assertJsonPath('data.verification_status', 'rejected');
-
-        $profile = $lawyer->fresh()->lawyerProfile;
-        $this->assertSame(VerificationStatus::Rejected, $profile->verification_status);
-        $this->assertNull($profile->verified_at);
-        $this->assertSame('Bar number could not be verified', AccountAction::firstWhere('user_id', $lawyer->user_id)->reason);
-    }
-
-    public function test_a_rejected_lawyer_can_be_approved_later(): void
-    {
-        $lawyer = User::factory()->lawyer(VerificationStatus::Rejected)->create();
-
-        $this->asSuper()->postJson(route('admin.lawyers.approve', $lawyer->user_id))->assertOk();
-
-        $this->assertSame(VerificationStatus::Verified, $lawyer->fresh()->lawyerProfile->verification_status);
-    }
-
-    public function test_repeating_a_verification_decision_is_rejected(): void
-    {
-        $verified = User::factory()->lawyer(VerificationStatus::Verified)->create();
-        $rejected = User::factory()->lawyer(VerificationStatus::Rejected)->create();
-
-        $this->asSuper()->postJson(route('admin.lawyers.approve', $verified->user_id))
-            ->assertUnprocessable()->assertJsonPath('message', 'This lawyer is already verified.');
-        $this->asSuper()->postJson(route('admin.lawyers.reject', $rejected->user_id), ['reason' => 'twice over'])
-            ->assertUnprocessable()->assertJsonPath('message', 'This lawyer is already rejected.');
-    }
-
-    public function test_verification_has_its_own_permission(): void
-    {
-        $lawyer = User::factory()->lawyer()->create();
-
-        $this->asStaff(['lawyers.view', 'lawyers.update'])->postJson(route('admin.lawyers.approve', $lawyer->user_id))->assertForbidden();
-        $this->asStaff(['lawyers.verify'])->postJson(route('admin.lawyers.approve', $lawyer->user_id))->assertOk();
-    }
 
     public function test_suspending_a_lawyer_does_not_change_their_verification(): void
     {

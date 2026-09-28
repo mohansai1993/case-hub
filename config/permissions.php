@@ -42,7 +42,7 @@ return [
                 'lawyers.create' => 'Add Lawyer',
                 'lawyers.update' => 'Edit Lawyer',
                 'lawyers.delete' => 'Delete Lawyer',
-                'lawyers.verify' => 'Verify Lawyer',
+                'lawyers.practice_areas' => 'Manage Specializations',
             ],
         ],
         'subscriptions' => [
