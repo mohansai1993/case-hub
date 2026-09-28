@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\OtpController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
+use App\Http\Controllers\Api\V1\DeviceTokenController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PracticeAreaController;
 use Illuminate\Support\Facades\Route;
 
@@ -53,6 +55,18 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('me', [LoginController::class, 'me'])->name('me');
             Route::post('logout', [LoginController::class, 'logout'])->name('logout');
             Route::post('logout-all', [LoginController::class, 'logoutAll'])->name('logout-all');
+        });
+    });
+
+    // Signed-in (push notifications)
+    Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
+        Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('device-tokens.store');
+        Route::delete('device-tokens', [DeviceTokenController::class, 'destroy'])->name('device-tokens.destroy');
+
+        Route::prefix('notifications')->name('notifications.')->group(function () {
+            Route::get('/', [NotificationController::class, 'index'])->name('index');
+            Route::post('{id}/read', [NotificationController::class, 'markRead'])->name('read');
+            Route::post('read-all', [NotificationController::class, 'markAllRead'])->name('read-all');
         });
     });
 });

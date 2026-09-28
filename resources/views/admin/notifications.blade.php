@@ -21,11 +21,11 @@
   <form id="create-form" class="notif-form" novalidate>
     <div class="form-row">
       <div class="form-label-row"><label for="notif-title">Notification Title</label></div>
-      <input class="input" id="notif-title" type="text" placeholder="Enter notification title" />
+      <input class="input" id="notif-title" type="text" maxlength="150" placeholder="Enter notification title" />
     </div>
     <div class="form-row">
       <div class="form-label-row"><label for="notif-message">Message</label></div>
-      <textarea class="input" id="notif-message" rows="4" placeholder="Enter notification message"></textarea>
+      <textarea class="input" id="notif-message" rows="4" maxlength="1000" placeholder="Enter notification message"></textarea>
     </div>
     <p class="error-msg" id="create-error"></p>
     <div class="form-actions">
@@ -152,40 +152,63 @@ function formatDateTime(date) {
   return `${formatDate(date)}, ${time}`;
 }
 
-// Sample data — replace with API data later
-let drafts = [
-  { id: 1, title: "Docket Schedule Notice & Filing Deadline", message: "All court filings for Q4 trial dockets must be uploaded to the portal by Friday 5:00 PM EST.", created: "15 Oct 2026" },
-  { id: 2, title: "Court Hearing Reschedule Advisory", message: "Upcoming hearings under the commercial division have been rescheduled; please review the updated calendar.", created: "14 Oct 2026" },
-  { id: 3, title: "Quarterly Retainer & Invoicing Notice", message: "Trust account disbursements and retainer invoices for the quarter are now available for review.", created: "12 Oct 2026" }
-];
+function initials(name) {
+  const clean = String(name).replace(/^Adv\.\s*/, "");
+  return clean.split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2).toUpperCase();
+}
 
-const recipients = {
-  Clients: [
-    { id: "#CL-10492", name: "Rahul Sharma", email: "rahul.sharma@corpmail.com", status: "Engaged" },
-    { id: "#CL-10511", name: "Priya Verma", email: "priya.verma@novanest.com", status: "Engaged" },
-    { id: "#CL-10388", name: "David Chen", email: "david.chen@mindmail.com", status: "Inactive" },
-    { id: "#CL-10604", name: "Elena Rostova", email: "e.rostova@techglobal.io", status: "Engaged" },
-    { id: "#CL-10277", name: "Ananya Patel", email: "ananya.patel@brightmart.in", status: "Engaged" }
-  ],
-  Lawyers: [
-    { id: "#NY-88210", name: "Adv. Sarah Williams", email: "s.williams@jurislex.com", status: "Engaged" },
-    { id: "#NY-73419", name: "Adv. John Smith", email: "j.smith@smithlegal.com", status: "Engaged" },
-    { id: "#TX-44120", name: "Adv. Marcus Vance", email: "m.vance@vancelegal.com", status: "Inactive" },
-    { id: "#IL-61108", name: "Adv. David Chen", email: "d.chen@chenpartners.com", status: "Engaged" }
-  ]
+function statusLabel(status) {
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || "";
+const ROUTES = {
+  createDraft: @json(route('admin.notifications.drafts.store')),
+  recipients: @json(route('admin.notifications.recipients')),
+  send: @json(route('admin.notifications.send')),
 };
 
-let sent = [
-  { title: "Docket Schedule Notice & Filing Deadline", to: "Rahul Sharma, Priya Verma", type: "Clients", date: "15 Oct 2026, 14:22" },
-  { title: "Urgent Discovery Hearing Reschedule", to: "Adv. Sarah Williams", type: "Lawyers", date: "14 Oct 2026, 11:05" },
-  { title: "Annual Retainer Invoicing Ready", to: "All Clients", type: "Clients", date: "12 Oct 2026, 09:30" },
-  { title: "Bar Association Policy Guidelines 2027", to: "All Lawyers", type: "Lawyers", date: "10 Oct 2026, 16:45" },
-  { title: "System Upgrade & Portal Downtime Notice", to: "All Clients", type: "Clients", date: "08 Oct 2026, 18:00" },
-  { title: "Emergency Court Filing Server Notice", to: "Adv. Marcus Vance", type: "Lawyers", date: "05 Oct 2026, 08:15" }
-];
+async function api(url, options = {}) {
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Accept": "application/json",
+      "X-CSRF-TOKEN": CSRF_TOKEN,
+      "X-Requested-With": "XMLHttpRequest",
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {}),
+    },
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const error = new Error(body.message || "Something went wrong. Please try again.");
+    error.errors = body.errors || null;
+    throw error;
+  }
+  return body;
+}
 
-let selectedDraftId = drafts[0].id;
-let selected = new Set(["#CL-10492", "#CL-10511"]);
+function firstError(err, fallback) {
+  if (err.errors) { return Object.values(err.errors)[0][0]; }
+  return err.message || fallback;
+}
+
+// Seeded from the server on page load.
+let drafts = @json($draftsForJs);
+let sent = @json($sentForJs);
+
+let selectedDraftId = drafts.length ? drafts[0].id : null;
+
+// id -> {id, reference, name, email, status}, kept even while the recipient
+// list is re-filtered by search so chips never lose their label.
+let selected = new Map();
+let currentRecipients = [];
+let recipientsLoading = false;
+let recipientRequestToken = 0;
+
+function audienceType(sendToLabel) {
+  return sendToLabel === "Lawyers" ? "lawyer" : "client";
+}
 
 // Create notification
 const createForm = document.getElementById("create-form");
@@ -193,7 +216,7 @@ const titleInput = document.getElementById("notif-title");
 const messageInput = document.getElementById("notif-message");
 const createError = document.getElementById("create-error");
 
-createForm.addEventListener("submit", (e) => {
+createForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const title = titleInput.value.trim();
   const message = messageInput.value.trim();
@@ -202,12 +225,22 @@ createForm.addEventListener("submit", (e) => {
     return;
   }
   createError.textContent = "";
-  // TODO: save the draft via backend API
-  const draft = { id: Date.now(), title, message, created: formatDate(new Date()) };
-  drafts.unshift(draft);
-  selectedDraftId = draft.id;
-  createForm.reset();
-  renderDrafts();
+
+  const submitBtn = createForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+
+  try {
+    const res = await api(ROUTES.createDraft, { method: "POST", body: JSON.stringify({ title, message }) });
+    const draft = { id: res.data.id, title: res.data.title, message: res.data.message, created: formatDate(new Date()) };
+    drafts.unshift(draft);
+    selectedDraftId = draft.id;
+    createForm.reset();
+    renderDrafts();
+  } catch (err) {
+    createError.textContent = firstError(err, "Could not create the notification. Please try again.");
+  } finally {
+    submitBtn.disabled = false;
+  }
 });
 
 // Created notifications
@@ -216,7 +249,7 @@ const selectedDraftBox = document.getElementById("selected-draft");
 
 function renderDrafts() {
   document.getElementById("drafts-count").textContent = `${drafts.length} Saved`;
-  draftsBody.innerHTML = drafts.map((d) => {
+  draftsBody.innerHTML = drafts.length ? drafts.map((d) => {
     const isSelected = d.id === selectedDraftId;
     return `
       <tr class="${isSelected ? "row-selected" : ""}">
@@ -229,7 +262,7 @@ function renderDrafts() {
             : `<button class="btn-sm" data-select="${d.id}">Select</button>`}
         </td>
       </tr>`;
-  }).join("");
+  }).join("") : '<tr><td colspan="4" class="empty-msg">No notification drafts yet.</td></tr>';
 
   const draft = drafts.find((d) => d.id === selectedDraftId);
   selectedDraftBox.innerHTML = draft
@@ -257,45 +290,66 @@ const chipRow = document.getElementById("chip-row");
 const bulkToggle = document.getElementById("bulk-toggle");
 const bulkText = document.getElementById("bulk-text");
 
-function currentList() {
-  return recipients[sendTo.value];
+async function loadRecipients() {
+  const token = ++recipientRequestToken;
+  recipientsLoading = true;
+  renderRecipients();
+
+  const params = new URLSearchParams({ type: audienceType(sendTo.value) });
+  const q = recipientSearch.value.trim();
+  if (q) params.set("q", q);
+
+  try {
+    const res = await api(`${ROUTES.recipients}?${params.toString()}`);
+    if (token !== recipientRequestToken) return; // a newer search is already in flight
+    currentRecipients = res.data;
+  } catch (err) {
+    if (token !== recipientRequestToken) return;
+    currentRecipients = [];
+  } finally {
+    if (token === recipientRequestToken) {
+      recipientsLoading = false;
+      renderRecipients();
+    }
+  }
 }
 
 function renderRecipients() {
-  const query = recipientSearch.value.trim().toLowerCase();
-  const list = currentList().filter((r) =>
-    !query || [r.name, r.email, r.id].some((v) => v.toLowerCase().includes(query))
-  );
-
   recipientList.classList.toggle("is-disabled", bulkToggle.checked);
-  recipientList.innerHTML = list.length
-    ? list.map((r) => `
+
+  recipientList.innerHTML = currentRecipients.length
+    ? currentRecipients.map((r) => `
         <li>
           <label class="recipient-item">
             <input type="checkbox" value="${escapeHtml(r.id)}" ${selected.has(r.id) ? "checked" : ""} ${bulkToggle.checked ? "disabled" : ""} />
-            <span class="mini-avatar">${escapeHtml(r.name.replace(/^Adv\.\s*/, "").split(" ").map((w) => w[0]).join("").slice(0, 2))}</span>
+            <span class="mini-avatar">${escapeHtml(initials(r.name))}</span>
             <span class="recipient-info">
               <strong>${escapeHtml(r.name)}</strong>
               <small>${escapeHtml(r.email)}</small>
             </span>
-            <span class="id-pill">${escapeHtml(r.id)}</span>
-            <span class="status ${r.status === "Engaged" ? "status-active" : "status-inactive"}">${r.status}</span>
+            <span class="id-pill">${escapeHtml(r.reference)}</span>
+            <span class="status ${r.status === "active" ? "status-active" : "status-inactive"}">${escapeHtml(statusLabel(r.status))}</span>
           </label>
         </li>`).join("")
-    : '<li class="empty-msg">No matches found.</li>';
+    : `<li class="empty-msg">${recipientsLoading ? "Loading…" : "No matches found."}</li>`;
 
-  const chosen = currentList().filter((r) => selected.has(r.id));
   chipRow.innerHTML = bulkToggle.checked
     ? `<span class="chip-label">Sending to all ${sendTo.value.toLowerCase()}</span>`
-    : chosen.length
-      ? `<span class="chip-label">${chosen.length} selected:</span>` +
-        chosen.map((r) => `<span class="chip">${escapeHtml(r.name)}<button type="button" data-remove="${escapeHtml(r.id)}" aria-label="Remove">×</button></span>`).join("")
+    : selected.size
+      ? `<span class="chip-label">${selected.size} selected:</span>` +
+        Array.from(selected.values()).map((r) => `<span class="chip">${escapeHtml(r.name)}<button type="button" data-remove="${escapeHtml(r.id)}" aria-label="Remove">×</button></span>`).join("")
       : '<span class="chip-label">No recipients selected</span>';
 }
 
 recipientList.addEventListener("change", (e) => {
   if (e.target.type !== "checkbox") return;
-  e.target.checked ? selected.add(e.target.value) : selected.delete(e.target.value);
+  const id = e.target.value;
+  if (e.target.checked) {
+    const record = currentRecipients.find((r) => r.id === id);
+    if (record) selected.set(id, record);
+  } else {
+    selected.delete(id);
+  }
   renderRecipients();
 });
 
@@ -311,59 +365,80 @@ sendTo.addEventListener("change", () => {
   recipientSearch.value = "";
   recipientSearch.placeholder = `Search ${sendTo.value.toLowerCase()}...`;
   bulkText.textContent = `When checked, the notification is sent to all registered ${sendTo.value.toLowerCase()} instead of the individual selection above.`;
-  renderRecipients();
+  loadRecipients();
 });
 
-recipientSearch.addEventListener("input", renderRecipients);
+let searchDebounce;
+recipientSearch.addEventListener("input", () => {
+  clearTimeout(searchDebounce);
+  searchDebounce = setTimeout(loadRecipients, 300);
+});
+
 bulkToggle.addEventListener("change", renderRecipients);
 
 // Send notification
 const sendError = document.getElementById("send-error");
+const sendBtn = document.getElementById("send-btn");
 
-document.getElementById("send-btn").addEventListener("click", () => {
+sendBtn.addEventListener("click", async () => {
   const draft = drafts.find((d) => d.id === selectedDraftId);
-  const chosen = currentList().filter((r) => selected.has(r.id));
 
   if (!draft) {
     sendError.textContent = "Please select a notification draft first.";
     return;
   }
-  if (!bulkToggle.checked && !chosen.length) {
+  if (!bulkToggle.checked && selected.size === 0) {
     sendError.textContent = "Please select at least one recipient.";
     return;
   }
   sendError.textContent = "";
+  sendBtn.disabled = true;
 
-  // TODO: send the notification via backend API
-  sent.unshift({
-    title: draft.title,
-    to: bulkToggle.checked ? `All ${sendTo.value}` : chosen.map((r) => r.name).join(", "),
-    type: sendTo.value,
-    date: formatDateTime(new Date())
-  });
+  try {
+    const res = await api(ROUTES.send, {
+      method: "POST",
+      body: JSON.stringify({
+        draft_id: draft.id,
+        audience: audienceType(sendTo.value),
+        bulk: bulkToggle.checked,
+        user_ids: bulkToggle.checked ? [] : Array.from(selected.keys()),
+      }),
+    });
 
-  selected.clear();
-  bulkToggle.checked = false;
-  renderRecipients();
-  renderSent();
-  document.getElementById("sent-body").closest("section").scrollIntoView({ behavior: "smooth" });
+    sent.unshift({
+      title: res.data.title,
+      to: res.data.to,
+      type: res.data.type,
+      date: formatDateTime(new Date(res.data.date)),
+    });
+
+    selected.clear();
+    bulkToggle.checked = false;
+    renderRecipients();
+    renderSent();
+    document.getElementById("sent-body").closest("section").scrollIntoView({ behavior: "smooth" });
+  } catch (err) {
+    sendError.textContent = firstError(err, "Could not send the notification. Please try again.");
+  } finally {
+    sendBtn.disabled = false;
+  }
 });
 
 // Sent notifications
 function renderSent() {
   document.getElementById("sent-count").textContent = `${sent.length} Dispatched`;
-  document.getElementById("sent-body").innerHTML = sent.map((s) => `
+  document.getElementById("sent-body").innerHTML = sent.length ? sent.map((s) => `
     <tr>
       <td><strong>${escapeHtml(s.title)}</strong></td>
       <td>${escapeHtml(s.to)}</td>
       <td><span class="plan ${s.type === "Clients" ? "plan-basic" : "plan-premium"}">${escapeHtml(s.type)}</span></td>
       <td>${escapeHtml(s.date)}</td>
       <td><span class="status status-active">Delivered</span></td>
-    </tr>`).join("");
+    </tr>`).join("") : '<tr><td colspan="5" class="empty-msg">No notifications sent yet.</td></tr>';
 }
 
 renderDrafts();
-renderRecipients();
+loadRecipients();
 renderSent();
 </script>
 @endpush

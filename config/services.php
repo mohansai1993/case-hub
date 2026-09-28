@@ -35,12 +35,6 @@ return [
         ],
     ],
 
-    'fcm' => [
-        'url' => env('FIREBASE_URL'),
-        'credentials' => env('GOOGLE_CREDENTIALS_PATH'),
-        'scope_url' => env('FIREBASE_SCOPE_MESSAGE_URL'),
-    ],
-    
     'facebook' => [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),

@@ -96,6 +96,11 @@ class User extends Authenticatable
         return $this->hasMany(AccountAction::class, 'user_id', 'user_id')->latest('id');
     }
 
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class, 'user_id', 'user_id');
+    }
+
     // -- Scopes / lookups ---------------------------------------------------------
 
     public function scopeClients(Builder $query): Builder
@@ -163,5 +168,11 @@ class User extends Authenticatable
     public function routeNotificationForSms(): ?string
     {
         return $this->mobile;
+    }
+
+    /** @return string[] FCM tokens for every device this user is signed in on. */
+    public function routeNotificationForFcm(): array
+    {
+        return $this->deviceTokens()->pluck('token')->all();
     }
 }

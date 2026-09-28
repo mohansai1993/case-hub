@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AccountActionController;
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\LawyerController;
+use App\Http\Controllers\Admin\NotificationController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -102,8 +103,14 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
         Route::view('/create-plan', 'admin.create-plan')
             ->middleware('permission:subscriptions.manage')->name('create-plan');
 
-        Route::view('/notifications', 'admin.notifications')
-            ->middleware('permission:notifications.view')->name('notifications');
+        Route::middleware('permission:notifications.view')->group(function () {
+            Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
+            Route::get('/notifications/recipients', [NotificationController::class, 'recipients'])->name('notifications.recipients');
+        });
+        Route::middleware('permission:notifications.create')->group(function () {
+            Route::post('/notifications/drafts', [NotificationController::class, 'storeDraft'])->name('notifications.drafts.store');
+            Route::post('/notifications/send', [NotificationController::class, 'send'])->name('notifications.send');
+        });
 
         Route::view('/settings', 'admin.settings')
             ->middleware('permission:settings.view')->name('settings');

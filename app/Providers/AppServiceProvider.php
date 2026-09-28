@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Contracts\PushGateway;
 use App\Contracts\SmsGateway;
+use App\Services\Push\FirebasePushGateway;
+use App\Services\Push\LogPushGateway;
 use App\Services\Sms\LogSmsGateway;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -18,6 +21,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(SmsGateway::class, match (config('otp.sms_driver')) {
             'log' => LogSmsGateway::class,
             default => LogSmsGateway::class,
+        });
+
+        $this->app->bind(PushGateway::class, match (config('firebase.driver')) {
+            'firebase' => FirebasePushGateway::class,
+            default => LogPushGateway::class,
         });
     }
 
