@@ -16,6 +16,13 @@ return Application::configure(basePath: dirname(__DIR__))
         api: __DIR__ . '/../routes/api.php',
         health: '/up',
     )
+    // Mobile app uses Sanctum bearer tokens, not the session cookie that
+    // Broadcast::routes() defaults to - so channel auth needs its own
+    // middleware, and lives under /api to match the rest of the mobile API.
+    ->withBroadcasting(
+        __DIR__ . '/../routes/channels.php',
+        ['prefix' => 'api', 'middleware' => ['auth:sanctum']],
+    )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias([
             'admin.active' => EnsureAdminIsActive::class,

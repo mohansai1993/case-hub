@@ -21,6 +21,7 @@
         <env name="APP_URL" value="http://localhost"/>
         <env name="APP_KEY" value="base64:Y2FzZWh1Yi10ZXN0LWtleXh4eHh4eHh4eHh4eHh4eHg="/>
         <env name="BCRYPT_ROUNDS" value="4"/>
+        <env name="BROADCAST_CONNECTION" value="log"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>

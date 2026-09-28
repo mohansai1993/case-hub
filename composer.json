@@ -11,6 +11,7 @@
         "php": "^8.2",
         "kreait/firebase-php": "^7.24",
         "laravel/framework": "^11.9",
+        "laravel/reverb": "^1.0",
         "laravel/sanctum": "^4.3",
         "laravel/tinker": "^2.9",
         "yajra/laravel-datatables": "^11.0"

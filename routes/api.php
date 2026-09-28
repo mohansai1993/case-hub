@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\OtpController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
+use App\Http\Controllers\Api\V1\CaseController;
+use App\Http\Controllers\Api\V1\CaseMessageController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PracticeAreaController;
@@ -67,6 +69,19 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
             Route::post('{id}/read', [NotificationController::class, 'markRead'])->name('read');
             Route::post('read-all', [NotificationController::class, 'markAllRead'])->name('read-all');
+        });
+
+        // Cases + the per-case real-time chat (see docs/04-realtime-chat.md).
+        Route::prefix('cases')->name('cases.')->group(function () {
+            Route::get('/', [CaseController::class, 'index'])->name('index');
+            Route::post('/', [CaseController::class, 'store'])->name('store');
+            Route::get('{case}', [CaseController::class, 'show'])->name('show');
+            Route::post('{case}/accept', [CaseController::class, 'accept'])->name('accept');
+            Route::post('{case}/reject', [CaseController::class, 'reject'])->name('reject');
+
+            Route::get('{case}/messages', [CaseMessageController::class, 'index'])->name('messages.index');
+            Route::post('{case}/messages', [CaseMessageController::class, 'store'])->name('messages.store');
+            Route::post('{case}/messages/read', [CaseMessageController::class, 'markRead'])->name('messages.read');
         });
     });
 });

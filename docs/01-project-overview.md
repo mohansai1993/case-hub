@@ -8,6 +8,9 @@ Ab tak jo **bana hua hai**:
 2. Admin panel ka **authentication** (login, forgot password OTP, logout) + **roles/permissions**.
 3. Mobile app ki **APIs**: Client/Lawyer register, OTP verify, login, forgot password.
 4. Admin panel mein **Clients aur Lawyers ka management**: list, details, suspend / activate (dono ke liye same, ek hi type ka control - lawyer ke liye alag se "approve/reject verification" nahi hai).
+5. Admin panel mein **Specializations (practice areas) ka management**: add/rename/activate-deactivate/delete - wahi list jo lawyer registration ke chips mein dikhti hai.
+6. **Push notifications** (Firebase Cloud Messaging): registration OTP ke alawa, admin panel se clients/lawyers ko chun kar in-app + push notification bhej sakte ho.
+7. **Real-time chat** (Laravel Reverb) Client aur Lawyer ke beech, ek minimal `cases` model (client + advocate + title + status) ke upar.
 
 Jo **abhi baaki** hai woh sabse neeche "Kya baaki hai" mein hai.
 
@@ -94,6 +97,12 @@ Migrations `database/migrations/` mein hain.
 | `lawyer_practice_area` | Lawyer <-> practice area link |
 | `user_otps` | App users ke OTP (registration ka email verify + forgot password ka mobile SMS), sirf hash |
 | `account_actions` | Admin ne kis client/lawyer par kya action kiya (suspend, activate) aur reason |
+| `device_tokens` | Har device ka FCM push token (multi-device support) |
+| `notifications` | Laravel ka standard database-notification table: in-app notification history (read/unread) |
+| `notification_drafts` | Admin ke banaye notification drafts (title + message), baad mein bhejne ke liye |
+| `notification_broadcasts` | Audit log: admin ne kisko (bulk ya specific), kab, kaunsa notification bheja |
+| `cases` | Minimal case: `client_id`, `advocate_id`, `title`, `status` (pending/accepted/rejected/closed) - chat isi se attach hai |
+| `case_messages` | Chat messages: `case_id`, `sender_id`, `body`, `read_at` |
 | `personal_access_tokens` | Sanctum ke mobile tokens |
 | `sessions`, `cache`, `jobs` ... | Laravel ke standard tables. `sessions.user_id` ko string kiya gaya (UUID ke liye). |
 
@@ -117,24 +126,27 @@ Purana `users.role` column (0 = user, 1 = admin) jaisa tha waisa hi hai, use nah
 
 ```
 app/
-  Enums/                    UserType, UserStatus, VerificationStatus, AdminStatus
-  Models/                   Admin, Role, User, LawyerProfile, PracticeArea, AccountAction, UserOtp ...
+  Enums/                    UserType, UserStatus, VerificationStatus, AdminStatus, DevicePlatform, CaseStatus
+  Models/                   Admin, Role, User, LawyerProfile, PracticeArea, AccountAction, UserOtp,
+                             DeviceToken, NotificationDraft, NotificationBroadcast, LegalCase, CaseMessage ...
+  Events/                   MessageSent (chat, Reverb broadcast)
   Http/
     Controllers/Auth/       Admin login + forgot password
-    Controllers/Admin/      Clients, Lawyers, moderation actions
-    Controllers/Api/V1/     Mobile API controllers
+    Controllers/Admin/      Clients, Lawyers, PracticeAreas, Notifications, moderation actions
+    Controllers/Api/V1/     Mobile API controllers (auth, notifications, device tokens, cases, chat)
     Middleware/             permission check, admin active check, no-store ...
     Requests/               Har form/API ki validation
-    Resources/UserResource  User ka JSON shape
+    Resources/              User/Notification/Case/CaseMessage ka JSON shape
   Services/
     Auth/                   Admin login + admin forgot password
     AppAuth/                Registration, OTP, API login, app forgot password
-    Admin/                  AccountModerationService (suspend/approve...)
-  Notifications/            OTP SMS / email
-config/                     permissions.php, otp.php, casehub.php, auth.php ...
+    Admin/                  AccountModerationService (suspend/activate), NotificationBroadcastService
+    Push/                   FCM (Firebase) push notification gateway
+  Notifications/            OTP SMS/email, push notification (FCM), chat message notification
+config/                     permissions.php, otp.php, casehub.php, auth.php, firebase.php, broadcasting.php, reverb.php ...
 resources/views/            layouts/, auth/login, admin/*
 public/assets/admin/        style.css, login.css, moderation.js, images
-routes/                     web.php (admin panel), api.php (mobile)
+routes/                     web.php (admin panel), api.php (mobile), channels.php (Reverb private channels)
 database/                   migrations, seeders, factories
 tests/                      Unit, Feature/Auth, Feature/Api, Feature/Admin
 docs/                       yeh documentation
@@ -156,6 +168,8 @@ Har feature ka logic **Service class** mein hai, controller sirf request lekar s
 | `API_TOKEN_TTL_MINUTES` / `API_TOKEN_REMEMBER_TTL_MINUTES` | Token ki umar: normal 7 din, "remember me" par 30 din |
 | `ADMIN_SEED_*` | `db:seed` ke Super Admin ki details |
 | `SESSION_SECURE_COOKIE` | HTTPS par `true` |
+| `PUSH_DRIVER`, `FIREBASE_*` | Push notifications (FCM). `log` = dev, `firebase` = asli device par jaata hai |
+| `BROADCAST_CONNECTION`, `REVERB_*` | Real-time chat (Laravel Reverb) - dekho `04-realtime-chat.md` |
 
 Poori list `.env.example` mein hai.
 
@@ -163,14 +177,14 @@ Poori list `.env.example` mein hai.
 
 ## 8. Tests
 
-`php vendor/bin/phpunit` -> **170 tests, sab pass**.
+`php vendor/bin/phpunit` -> **178 tests, sab pass**.
 
 | Folder | Kya check hota hai |
 |---|---|
 | `tests/Unit` | Email/mobile ko normalise karna |
 | `tests/Feature/Auth` | Admin login, lockout, remember me, logout, forgot password OTP flow, permissions, deactivation |
-| `tests/Feature/Api` | Registration (validation, photo rules, duplicates), OTP (wrong/expired/attempt limit), login (wrong tab, suspended, lockout, tokens), forgot password |
-| `tests/Feature/Admin` | Lists, search, filters, pagination, suspend/activate/approve/reject, permissions, audit history |
+| `tests/Feature/Api` | Registration (validation, photo rules, duplicates), OTP (wrong/expired/attempt limit), login (wrong tab, suspended, lockout, tokens), forgot password, cases + real-time chat (open/accept/reject, messages, unread, channel auth) |
+| `tests/Feature/Admin` | Lists, search, filters, pagination, suspend/activate, permissions, audit history |
 
 Tests apne alag in-memory database par chalte hain, tumhare `case_hub` database ko nahi chhute.
 
@@ -178,7 +192,7 @@ Tests apne alag in-memory database par chalte hain, tumhare `case_hub` database 
 
 ## 9. Kya baaki hai / jo maan ke chala gaya hoon
 
-**Abhi static (design ka nakli data) wale pages:** Dashboard, Subscriptions, Settings, Notifications, Roles, Staff. Inka backend abhi nahi bana. Inhe database se jodna agla kaam hai.
+**Abhi static (design ka nakli data) wale pages:** Dashboard, Subscriptions, Settings, Roles, Staff. Inka backend abhi nahi bana. Inhe database se jodna agla kaam hai.
 
 **Business rules jo tumne define nahi kiye (maine ye maana hai, badalna ho toh bata dena):**
 
@@ -187,6 +201,7 @@ Tests apne alag in-memory database par chalte hain, tumhare `case_hub` database 
 3. Registration ke baad account tab tak login nahi kar sakta jab tak email OTP verify na ho (pehle mobile SMS se tha, ab email se hota hai).
 4. Mobile number Indian format (10 digit, 6-9 se shuru; `+91` chalta hai).
 5. Password kam se kam 8 akshar (design mein 6 tha; legal data ke hisab se sakht rakha).
+6. **Case feature abhi minimal hai** - sirf `client_id`, `advocate_id`, `title`, `status` (pending/accepted/rejected/closed), taaki real-time chat attach ho sake. Poora case-management (documents, description, location/date, status-history table) alag feature hai, abhi nahi bana - dekho `04-realtime-chat.md`.
 
 **Abhi baaki:**
 

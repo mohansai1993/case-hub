@@ -1,6 +1,6 @@
 # 02 - Admin Panel
 
-Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pages kaun kaun se hain, kaun kya dekh sakta hai, login/forgot password kaise kaam karta hai, aur Clients/Lawyers ko suspend/approve karne wale JSON endpoints ke request/response.
+Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pages kaun kaun se hain, kaun kya dekh sakta hai, login/forgot password kaise kaam karta hai, aur Clients/Lawyers ko suspend/activate karne wale JSON endpoints ke request/response.
 
 > Neeche ke JSON endpoints **browser session** se chalte hain (admin login ke baad), Postman/mobile se nahi. Har POST par `X-CSRF-TOKEN` header aur session cookie chahiye. Admin panel ka page khud yeh sab handle karta hai (`moderation.js`).
 
@@ -16,10 +16,11 @@ Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pa
 | `/admin/clients` | Clients list | `clients.view` |
 | `/admin/clients/{id}` | Client details + suspend/activate | `clients.view` (dekhne ke liye), `clients.update` (buttons ke liye) |
 | `/admin/lawyers` | Lawyers list | `lawyers.view` |
-| `/admin/lawyers/{id}` | Lawyer details + suspend/activate + approve/reject | `lawyers.view`; `lawyers.update`; `lawyers.verify` |
+| `/admin/lawyers/{id}` | Lawyer details + suspend/activate (client jaisa hi, alag se verification approve/reject nahi hai) | `lawyers.view`; `lawyers.update` |
+| `/admin/lawyers/practice-areas` | Specialization chips add/rename/activate-deactivate/delete | `lawyers.practice_areas` |
 | `/admin/subscriptions`, `/admin/subscription-details` | Subscriptions (abhi static) | `subscriptions.view` |
 | `/admin/create-plan` | Plan banana (abhi static) | `subscriptions.manage` |
-| `/admin/notifications` | Notifications (abhi static) | `notifications.view` |
+| `/admin/notifications` | Notifications: draft banao, clients/lawyers select karke bhejo (in-app + push), sent history | `notifications.view`; `notifications.create` |
 | `/admin/settings` | Settings (abhi static) | `settings.view` |
 | `/admin/roles`, `/admin/create-role`, `/admin/role-details` | Roles (abhi static) | Sirf Super Admin |
 | `/admin/staff`, `/admin/create-staff`, `/admin/staff-details` | Staff (abhi static) | Sirf Super Admin |
@@ -150,19 +151,18 @@ Limits: OTP bhejne par 5/minute per IP; verify par 10/minute; dono par per-accou
 |---|---|---|
 | `q` | Dono | Name, email ya mobile mein search (`%` `_` jaise akshar literally search hote hain) |
 | `status` | Dono | `active`, `inactive`, `suspended` |
-| `verification` | Lawyers | `pending`, `verified`, `rejected` |
 | `practice_area` | Lawyers | Practice area ka id |
 | `page` | Dono | Page number (15 per page) |
 
-Galat filter value ignore ho jaati hai (page toot-ta nahi). Example: `/admin/lawyers?verification=pending&q=marcus`.
+Galat filter value ignore ho jaati hai (page toot-ta nahi). Example: `/admin/lawyers?practice_area=3&q=marcus`.
 
 List mein sirf app ke accounts dikhte hain: Clients page par sirf clients, Lawyers page par sirf lawyers. Admins kabhi nahi.
 
 ---
 
-## 5. Suspend / Activate / Approve / Reject (JSON)
+## 5. Suspend / Activate (JSON)
 
-Yeh Details page ke buttons ke peeche ke endpoints hain. Button dabane par **SweetAlert** dialog khulta hai (confirm, aur suspend/reject par reason likhna zaroori), phir request jaati hai. Kabhi browser ka `confirm()`/`alert()` nahi.
+Yeh Details page ke buttons ke peeche ke endpoints hain. Client aur Lawyer dono ke liye **same do actions** hain - koi alag "verification approve/reject" nahi hai. Button dabane par **SweetAlert** dialog khulta hai (confirm, aur suspend par reason likhna zaroori), phir request jaati hai. Kabhi browser ka `confirm()`/`alert()` nahi.
 
 Common: session cookie + `X-CSRF-TOKEN`, `Accept: application/json`. `{id}` = user ka UUID.
 
@@ -172,8 +172,6 @@ Common: session cookie + `X-CSRF-TOKEN`, `Accept: application/json`. `{id}` = us
 | `POST /admin/clients/{id}/activate` | Client dobara active | `clients.update` | nahi |
 | `POST /admin/lawyers/{id}/suspend` | Lawyer suspend | `lawyers.update` | zaroori |
 | `POST /admin/lawyers/{id}/activate` | Lawyer dobara active | `lawyers.update` | nahi |
-| `POST /admin/lawyers/{id}/approve` | Lawyer verify | `lawyers.verify` | nahi |
-| `POST /admin/lawyers/{id}/reject` | Lawyer ka verification reject | `lawyers.verify` | zaroori |
 
 Ek URL se sirf usi type ka account milta hai: client ke URL par lawyer ka id dene par `404`, aur ulta bhi. Admin accounts in URLs se kabhi chhue nahi ja sakte.
 
@@ -188,7 +186,7 @@ Response `200`:
 ```json
 {
   "message": "Account suspended.",
-  "data": { "status": "suspended", "verification_status": null }
+  "data": { "status": "suspended" }
 }
 ```
 
@@ -218,42 +216,13 @@ Response `200`:
 ```json
 {
   "message": "Account activated.",
-  "data": { "status": "active", "verification_status": null }
+  "data": { "status": "active" }
 }
 ```
 
 Pehle se active account par `422`: `{ "message": "This account is already active." }`. Inactive ya suspended dono ko activate kar sakte hain.
 
-### 5.3 Lawyer approve - `POST /admin/lawyers/{id}/approve`
-
-Response `200`:
-```json
-{
-  "message": "Lawyer approved.",
-  "data": { "status": "active", "verification_status": "verified" }
-}
-```
-`verified_at` set ho jaata hai. Pehle se verified par `422`: `{ "message": "This lawyer is already verified." }`. Rejected lawyer ko baad mein approve kiya ja sakta hai.
-
-### 5.4 Lawyer reject - `POST /admin/lawyers/{id}/reject`
-
-Request:
-```json
-{ "reason": "Bar number could not be verified" }
-```
-
-Response `200`:
-```json
-{
-  "message": "Lawyer rejected.",
-  "data": { "status": "active", "verification_status": "rejected" }
-}
-```
-Verified lawyer ko reject karne par `verified_at` hat jaata hai. Pehle se rejected par `422`: `{ "message": "This lawyer is already rejected." }`.
-
-Lawyer ko **suspend** karne se uska verification status nahi badalta (dono alag cheezein hain).
-
-### 5.5 Common errors (sab 6 endpoints par)
+### 5.3 Common errors (sab 4 endpoints par)
 
 | Status | Kab | Response |
 |---|---|---|
@@ -275,8 +244,6 @@ Har client/lawyer ke details page par **"Account History"** card hai: kaun sa ac
 |---|---|
 | `suspended` | Account suspend |
 | `activated` | Account activate |
-| `lawyer_approved` | Lawyer verified |
-| `lawyer_rejected` | Lawyer ka verification reject |
 
 ---
 
