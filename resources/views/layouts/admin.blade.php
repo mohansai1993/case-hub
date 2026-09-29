@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>@yield('title', 'CaseHub')</title>
+  <link rel="icon" type="image/png" href="{{ asset('assets/admin/images/casehub-fav.png') }}" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -41,6 +42,10 @@
     document.getElementById("menu-btn").addEventListener("click", () => toggleSidebar(true));
     backdrop.addEventListener("click", () => toggleSidebar(false));
   </script>
+  <script src="{{ asset('assets/admin/toast.js') }}"></script>
+  @if (session('toast'))
+    <script>showToast(@json(session('toast.message')), @json(session('toast.type', 'info')));</script>
+  @endif
   @stack('scripts')
 </body>
 </html>

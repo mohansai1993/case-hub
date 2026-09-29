@@ -42,23 +42,12 @@
     </div>
   </div>
 
-  <div class="toast" id="toast" hidden></div>
 @endpush
 
 @push('scripts')
 <script src="{{ asset('assets/admin/roles-data.js') }}"></script>
 <script>
-// Toast + modals
-const toast = document.getElementById("toast");
-let toastTimer = null;
-
-function showToast(message) {
-  toast.textContent = message;
-  toast.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toast.hidden = true), 2500);
-}
-
+// Modals
 document.querySelectorAll(".modal-backdrop").forEach((modal) => {
   modal.addEventListener("click", (e) => {
     if (e.target === modal || e.target.closest("[data-close]")) modal.hidden = true;

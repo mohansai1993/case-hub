@@ -51,7 +51,8 @@ class LoginController extends Controller
         // New session id on privilege change: defeats session fixation.
         $request->session()->regenerate();
 
-        return redirect()->intended(route('admin.home'));
+        return redirect()->intended(route('admin.home'))
+            ->with('toast', ['type' => 'success', 'message' => 'Logged in successfully.']);
     }
 
     public function destroy(Request $request): RedirectResponse
@@ -61,6 +62,7 @@ class LoginController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect()->route('login');
+        return redirect()->route('login')
+            ->with('toast', ['type' => 'success', 'message' => 'You have been logged out.']);
     }
 }

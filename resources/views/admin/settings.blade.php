@@ -207,7 +207,6 @@
     </div>
   </div>
 
-  <div class="toast" id="toast" hidden></div>
 @endpush
 
 @push('scripts')
@@ -216,17 +215,6 @@ function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = String(text);
   return div.innerHTML;
-}
-
-// Toast message
-const toast = document.getElementById("toast");
-let toastTimer = null;
-
-function showToast(message) {
-  toast.textContent = message;
-  toast.hidden = false;
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => (toast.hidden = true), 2500);
 }
 
 // Modals
