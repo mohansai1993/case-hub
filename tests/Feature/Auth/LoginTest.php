@@ -31,6 +31,21 @@ class LoginTest extends TestCase
         $this->followingRedirects()->get(route('admin.home'))->assertOk();
     }
 
+    public function test_login_still_authenticates_when_routes_are_cached(): void
+    {
+        $admin = Admin::factory()->superAdmin()->create();
+        $router = $this->app['router'];
+        $router->setCompiledRoutes($router->getRoutes()->compile());
+
+        $this->get('/login')->assertRedirect('/');
+
+        $this->post('/login', ['identifier' => $admin->email, 'password' => AdminFactory::PASSWORD])
+            ->assertRedirect(route('admin.home'));
+
+        $this->assertAuthenticatedAs($admin, 'admin');
+        $this->followingRedirects()->get(route('admin.home'))->assertOk();
+    }
+
     public function test_admin_can_login_with_mobile_in_any_common_format(): void
     {
         $admin = Admin::factory()->superAdmin()->create(['mobile' => '9876543210']);

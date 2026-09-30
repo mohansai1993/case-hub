@@ -18,7 +18,8 @@ use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest:admin')->group(function () {
     Route::get('/', [LoginController::class, 'create'])->name('login');
-    Route::redirect('/login', '/');
+    // Keep the alias GET-only so cached routes cannot intercept login POSTs.
+    Route::get('/login', fn () => redirect('/'));
 
     Route::post('/login', [LoginController::class, 'store'])
         ->middleware('throttle:login')
