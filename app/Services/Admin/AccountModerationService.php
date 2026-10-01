@@ -3,10 +3,15 @@
 namespace App\Services\Admin;
 
 use App\Enums\UserStatus;
+use App\Enums\UserType;
+use App\Enums\VerificationStatus;
 use App\Exceptions\InvalidStateTransition;
 use App\Models\AccountAction;
 use App\Models\Admin;
+use App\Models\LawyerProfile;
 use App\Models\User;
+use App\Notifications\LawyerApproved;
+use App\Notifications\LawyerRejected;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -50,6 +55,65 @@ class AccountModerationService
 
             $this->record($locked, $by, AccountAction::ACTIVATED, $from->value, UserStatus::Active->value);
         });
+    }
+
+    /** Approves a lawyer's verification request so they can sign in. */
+    public function approveLawyer(User $lawyer, Admin $by): User
+    {
+        $this->guardIsLawyer($lawyer);
+
+        return DB::transaction(function () use ($lawyer, $by) {
+            $profile = LawyerProfile::whereKey($lawyer->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($profile->verification_status === VerificationStatus::Verified) {
+                throw new InvalidStateTransition('This advocate is already verified.');
+            }
+
+            $from = $profile->verification_status;
+            $profile->forceFill([
+                'verification_status' => VerificationStatus::Verified,
+                'verified_at' => now(),
+            ])->save();
+
+            $this->record($lawyer, $by, AccountAction::LAWYER_APPROVED, $from->value, VerificationStatus::Verified->value);
+
+            $lawyer->notify(new LawyerApproved);
+
+            return $lawyer->refresh();
+        });
+    }
+
+    /** Rejects a lawyer's verification request; they cannot sign in until approved. */
+    public function rejectLawyer(User $lawyer, Admin $by, string $reason): User
+    {
+        $this->guardIsLawyer($lawyer);
+
+        return DB::transaction(function () use ($lawyer, $by, $reason) {
+            $profile = LawyerProfile::whereKey($lawyer->getKey())->lockForUpdate()->firstOrFail();
+
+            if ($profile->verification_status === VerificationStatus::Rejected) {
+                throw new InvalidStateTransition('This advocate has already been rejected.');
+            }
+
+            $from = $profile->verification_status;
+            $profile->forceFill([
+                'verification_status' => VerificationStatus::Rejected,
+                'verified_at' => null,
+            ])->save();
+
+            $this->record($lawyer, $by, AccountAction::LAWYER_REJECTED, $from->value, VerificationStatus::Rejected->value, $reason);
+
+            $lawyer->notify(new LawyerRejected($reason));
+
+            return $lawyer->refresh();
+        });
+    }
+
+    private function guardIsLawyer(User $user): void
+    {
+        if ($user->type !== UserType::Lawyer) {
+            throw new InvalidStateTransition('This account is not a lawyer.');
+        }
     }
 
     /** @param  callable(User): void  $change */

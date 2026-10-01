@@ -29,6 +29,12 @@
           <option value="{{ $status->value }}" @selected(($filters['status'] ?? null) === $status->value)>{{ ucfirst($status->value) }}</option>
         @endforeach
       </select>
+      <select name="verification" aria-label="Verification status" data-autosubmit>
+        <option value="">All Verification</option>
+        @foreach (\App\Enums\VerificationStatus::cases() as $verification)
+          <option value="{{ $verification->value }}" @selected(($filters['verification'] ?? null) === $verification->value)>{{ ucfirst($verification->value) }}</option>
+        @endforeach
+      </select>
       <select name="practice_area" aria-label="Specialization" data-autosubmit>
         <option value="">All Specializations</option>
         @foreach ($practiceAreas as $area)
@@ -50,6 +56,7 @@
           <th>Specialization</th>
           <th>Experience</th>
           <th>Account Status</th>
+          <th>Verification</th>
           <th>Joined Date</th>
           <th>Action</th>
         </tr>
@@ -65,12 +72,22 @@
             <td>{{ $lawyer->practiceAreas->pluck('name')->join(', ') ?: '—' }}</td>
             <td>{{ $lawyer->lawyerProfile?->years_of_experience }} {{ \Illuminate\Support\Str::plural('yr', $lawyer->lawyerProfile?->years_of_experience ?? 0) }}</td>
             <td><span class="status status-{{ $lawyer->status->value }}">{{ ucfirst($lawyer->status->value) }}</span></td>
+            <td>
+              @php
+                $verificationClass = match ($lawyer->lawyerProfile?->verification_status) {
+                  \App\Enums\VerificationStatus::Verified => 'status-active',
+                  \App\Enums\VerificationStatus::Rejected => 'status-rejected',
+                  default => 'status-pending',
+                };
+              @endphp
+              <span class="status {{ $verificationClass }}">{{ ucfirst($lawyer->lawyerProfile?->verification_status->value ?? 'pending') }}</span>
+            </td>
             <td>{{ $lawyer->created_at->format('d M Y') }}</td>
             <td><a href="{{ route('admin.lawyer-details', $lawyer->user_id) }}" class="btn-view">View</a></td>
           </tr>
         @empty
           <tr>
-            <td colspan="7"><p class="empty-msg">{{ $total ? 'No lawyers match your search.' : 'No lawyers have registered yet.' }}</p></td>
+            <td colspan="8"><p class="empty-msg">{{ $total ? 'No lawyers match your search.' : 'No lawyers have registered yet.' }}</p></td>
           </tr>
         @endforelse
       </tbody>

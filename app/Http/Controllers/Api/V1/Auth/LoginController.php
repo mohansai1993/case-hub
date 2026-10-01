@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
+use App\Enums\VerificationStatus;
 use App\Exceptions\Auth\AccountInactive;
 use App\Exceptions\Auth\EmailNotVerified;
 use App\Exceptions\Auth\InvalidCredentials;
+use App\Exceptions\Auth\LawyerNotVerified;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Requests\Api\Auth\UpdatePasswordRequest;
@@ -60,6 +62,16 @@ class LoginController extends Controller
                     'email' => $e->user->email,
                     'resend_in' => (int) config('otp.app.resend_after'),
                 ],
+            ], 403);
+        } catch (LawyerNotVerified $e) {
+            $status = $e->user->lawyerProfile->verification_status;
+
+            return response()->json([
+                'message' => $status === VerificationStatus::Rejected
+                    ? 'Your advocate application was not approved. Contact support for details.'
+                    : 'Your account is awaiting admin approval. We will notify you once it is reviewed.',
+                'code' => 'lawyer_not_verified',
+                'data' => ['verification_status' => $status->value],
             ], 403);
         }
 

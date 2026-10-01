@@ -37,6 +37,22 @@ class AccountActionController extends Controller
         return $this->run(fn () => $this->moderation->activate($user, $request->user('admin')), 'Account activated.');
     }
 
+    /** Approves a lawyer's verification request so they can sign in. Lawyers only. */
+    public function approve(Request $request, string $id): JsonResponse
+    {
+        $user = $this->resolve($request, $id);
+
+        return $this->run(fn () => $this->moderation->approveLawyer($user, $request->user('admin')), 'Advocate approved.');
+    }
+
+    /** Rejects a lawyer's verification request. Lawyers only. */
+    public function reject(ReasonRequest $request, string $id): JsonResponse
+    {
+        $user = $this->resolve($request, $id);
+
+        return $this->run(fn () => $this->moderation->rejectLawyer($user, $request->user('admin'), $request->reason()), 'Advocate rejected.');
+    }
+
     private function resolve(Request $request, string $id): User
     {
         return User::where('type', $request->route('type'))->findOrFail($id);
@@ -52,7 +68,10 @@ class AccountActionController extends Controller
 
         return response()->json([
             'message' => $successMessage,
-            'data' => ['status' => $user->status->value],
+            'data' => [
+                'status' => $user->status->value,
+                'verification_status' => $user->isLawyer() ? $user->lawyerProfile?->verification_status->value : null,
+            ],
         ]);
     }
 }

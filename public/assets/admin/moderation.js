@@ -1,5 +1,5 @@
 /*
- * Account moderation buttons (suspend / activate).
+ * Account moderation buttons (suspend / activate / approve / reject).
  *
  * Any element with data-moderate="<action>" is handled here:
  *   data-url   POST endpoint
@@ -30,6 +30,20 @@
       text: "They will be able to log in again.",
       icon: "question",
       confirm: "Yes, activate"
+    },
+    approve: {
+      title: function (n) { return "Approve " + n + "?"; },
+      text: "They will be able to sign in to the app and start accepting cases.",
+      icon: "question",
+      confirm: "Yes, approve"
+    },
+    reject: {
+      title: function (n) { return "Reject " + n + "?"; },
+      text: "They will not be able to sign in. They will be emailed the reason you give below.",
+      icon: "warning",
+      confirm: "Yes, reject",
+      danger: true,
+      reason: { label: "Reason for rejection", placeholder: "Explain why this application is being rejected..." }
     },
     "disable-role": {
       title: function (n) { return "Disable " + n + "?"; },

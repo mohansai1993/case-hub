@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Admin;
 
 use App\Enums\UserStatus;
+use App\Enums\VerificationStatus;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
@@ -42,5 +43,11 @@ class AccountListRequest extends FormRequest
         $id = $this->query('practice_area');
 
         return is_string($id) && ctype_digit($id) ? (int) $id : null;
+    }
+
+    /** Lawyers list only - verification is a profile field, not an account status. */
+    public function verification(): ?VerificationStatus
+    {
+        return VerificationStatus::tryFrom((string) $this->query('verification'));
     }
 }

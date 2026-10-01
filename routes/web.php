@@ -93,7 +93,8 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
                 ->defaults('type', 'client')->whereUuid('id')->name('clients.activate');
         });
 
-        // Lawyers: same account controls as clients (no separate verification step).
+        // Lawyers: same account controls as clients, plus a verification
+        // approval step - a lawyer cannot sign in until an admin approves them.
         Route::middleware('permission:lawyers.view')->group(function () {
             Route::get('/lawyers', [LawyerController::class, 'index'])->name('lawyers');
             Route::get('/lawyers/{id}', [LawyerController::class, 'show'])->whereUuid('id')->name('lawyer-details');
@@ -111,6 +112,10 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
                 ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.suspend');
             Route::post('/lawyers/{id}/activate', [AccountActionController::class, 'activate'])
                 ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.activate');
+            Route::post('/lawyers/{id}/approve', [AccountActionController::class, 'approve'])
+                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.approve');
+            Route::post('/lawyers/{id}/reject', [AccountActionController::class, 'reject'])
+                ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.reject');
         });
 
         Route::get('/subscriptions', [PlanController::class, 'index'])

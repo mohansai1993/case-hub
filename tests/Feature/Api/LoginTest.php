@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\VerificationStatus;
 use App\Models\User;
 use App\Notifications\VerificationCode;
 use Illuminate\Support\Facades\Notification;
@@ -44,12 +45,42 @@ class LoginTest extends ApiTestCase
 
     public function test_lawyer_logs_in_on_the_lawyer_tab_and_sees_their_profile(): void
     {
-        User::factory()->lawyer()->create(['email' => 'rahul@example.com']);
+        User::factory()->lawyer(VerificationStatus::Verified)->create(['email' => 'rahul@example.com']);
 
         $this->login(['type' => 'lawyer'])
             ->assertOk()
             ->assertJsonPath('data.user.type', 'lawyer')
-            ->assertJsonPath('data.user.lawyer.verification_status', 'pending');
+            ->assertJsonPath('data.user.lawyer.verification_status', 'verified');
+    }
+
+    public function test_an_unverified_lawyer_cannot_log_in(): void
+    {
+        User::factory()->lawyer(VerificationStatus::Pending)->create(['email' => 'rahul@example.com']);
+
+        $this->login(['type' => 'lawyer'])
+            ->assertStatus(403)
+            ->assertJsonPath('code', 'lawyer_not_verified')
+            ->assertJsonPath('data.verification_status', 'pending')
+            ->assertJsonMissingPath('data.token');
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_a_rejected_lawyer_cannot_log_in(): void
+    {
+        User::factory()->lawyer(VerificationStatus::Rejected)->create(['email' => 'rahul@example.com']);
+
+        $this->login(['type' => 'lawyer'])
+            ->assertStatus(403)
+            ->assertJsonPath('code', 'lawyer_not_verified')
+            ->assertJsonPath('data.verification_status', 'rejected');
+    }
+
+    public function test_a_verified_lawyer_who_gets_suspended_is_blocked_by_suspension_not_verification(): void
+    {
+        User::factory()->lawyer(VerificationStatus::Verified)->suspended()->create(['email' => 'rahul@example.com']);
+
+        $this->login(['type' => 'lawyer'])->assertStatus(403)->assertJsonPath('code', 'account_inactive');
     }
 
     public function test_the_wrong_tab_looks_exactly_like_a_wrong_password(): void

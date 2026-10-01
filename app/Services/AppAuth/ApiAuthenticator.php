@@ -3,9 +3,11 @@
 namespace App\Services\AppAuth;
 
 use App\Enums\UserType;
+use App\Enums\VerificationStatus;
 use App\Exceptions\Auth\AccountInactive;
 use App\Exceptions\Auth\EmailNotVerified;
 use App\Exceptions\Auth\InvalidCredentials;
+use App\Exceptions\Auth\LawyerNotVerified;
 use App\Models\User;
 use App\Support\DecoyPassword;
 use App\Support\Identifier;
@@ -22,10 +24,11 @@ class ApiAuthenticator
      * @throws InvalidCredentials  unknown account, wrong password or wrong tab (indistinguishable)
      * @throws AccountInactive     deactivated / suspended (only after the password was right)
      * @throws EmailNotVerified    registration not completed (only after the password was right)
+     * @throws LawyerNotVerified   a lawyer account an admin hasn't approved yet
      */
     public function attempt(UserType $type, ?Identifier $identifier, string $password): User
     {
-        $user = $identifier ? User::findByIdentifier($identifier) : null;
+        $user = $identifier ? User::findByIdentifier($identifier)?->load('lawyerProfile') : null;
 
         $passwordMatches = DecoyPassword::check($password, $user?->password);
 
@@ -41,6 +44,10 @@ class ApiAuthenticator
 
         if (! $user->hasVerifiedEmail()) {
             throw new EmailNotVerified($user);
+        }
+
+        if ($user->isLawyer() && $user->lawyerProfile?->verification_status !== VerificationStatus::Verified) {
+            throw new LawyerNotVerified($user);
         }
 
         if (Hash::needsRehash($user->password)) {

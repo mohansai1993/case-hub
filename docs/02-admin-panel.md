@@ -1,6 +1,6 @@
 # 02 - Admin Panel
 
-Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pages kaun kaun se hain, kaun kya dekh sakta hai, login/forgot password kaise kaam karta hai, aur Clients/Lawyers ko suspend/activate karne wale JSON endpoints ke request/response.
+Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pages kaun kaun se hain, kaun kya dekh sakta hai, login/forgot password kaise kaam karta hai, aur Clients/Lawyers ko suspend/activate/approve/reject karne wale JSON endpoints ke request/response.
 
 > Neeche ke JSON endpoints **browser session** se chalte hain (admin login ke baad), Postman/mobile se nahi. Har POST par `X-CSRF-TOKEN` header aur session cookie chahiye. Admin panel ka page khud yeh sab handle karta hai (`moderation.js`).
 
@@ -16,7 +16,7 @@ Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pa
 | `/admin/clients` | Clients list | `clients.view` |
 | `/admin/clients/{id}` | Client details + suspend/activate + unka Subscription card (plan, status, storage usage, recent billing) | `clients.view` (dekhne ke liye), `clients.update` (buttons ke liye) |
 | `/admin/lawyers` | Lawyers list | `lawyers.view` |
-| `/admin/lawyers/{id}` | Lawyer details + suspend/activate (client jaisa hi, alag se verification approve/reject nahi hai) | `lawyers.view`; `lawyers.update` |
+| `/admin/lawyers/{id}` | Lawyer details + suspend/activate + **approve/reject** verification (jab tak approve nahi, lawyer app mein login nahi kar sakta) | `lawyers.view`; `lawyers.update` |
 | `/admin/lawyers/practice-areas` | Specialization chips add/rename/activate-deactivate/delete | `lawyers.practice_areas` |
 | `/admin/subscriptions` | Subscription Plans grid + real Client Subscriptions list (search/filter by plan/status, dono dynamic/DB-backed) | `subscriptions.view` |
 | `/admin/plans/create`, `/admin/plans/{plan}/edit` | Plan banao/edit karo: naam, storage (MB ya GB), price, description, popular tag | `subscriptions.manage` |
@@ -171,6 +171,7 @@ Limits: OTP bhejne par 5/minute per IP; verify par 10/minute; dono par per-accou
 |---|---|---|
 | `q` | Dono | Name, email ya mobile mein search (`%` `_` jaise akshar literally search hote hain) |
 | `status` | Dono | `active`, `inactive`, `suspended` |
+| `verification` | Lawyers | `pending`, `verified`, `rejected` |
 | `practice_area` | Lawyers | Practice area ka id |
 | `page` | Dono | Page number (15 per page) |
 
@@ -180,9 +181,9 @@ List mein sirf app ke accounts dikhte hain: Clients page par sirf clients, Lawye
 
 ---
 
-## 5. Suspend / Activate (JSON)
+## 5. Suspend / Activate / Approve / Reject (JSON)
 
-Yeh Details page ke buttons ke peeche ke endpoints hain. Client aur Lawyer dono ke liye **same do actions** hain - koi alag "verification approve/reject" nahi hai. Button dabane par **SweetAlert** dialog khulta hai (confirm, aur suspend par reason likhna zaroori), phir request jaati hai. Kabhi browser ka `confirm()`/`alert()` nahi.
+Yeh Details page ke buttons ke peeche ke endpoints hain. Client aur Lawyer dono ke liye suspend/activate same hain. Lawyer ke liye ek extra pair hai - **Approve / Reject** - kyunki lawyer tab tak app mein login hi nahi kar sakta jab tak admin usko approve na kare (`verification_status`, `lawyer_profiles` table ka field, `users.status` se alag). Button dabane par **SweetAlert** dialog khulta hai (confirm, aur suspend/reject par reason likhna zaroori), phir request jaati hai. Kabhi browser ka `confirm()`/`alert()` nahi.
 
 Common: session cookie + `X-CSRF-TOKEN`, `Accept: application/json`. `{id}` = user ka UUID.
 
@@ -192,8 +193,10 @@ Common: session cookie + `X-CSRF-TOKEN`, `Accept: application/json`. `{id}` = us
 | `POST /admin/clients/{id}/activate` | Client dobara active | `clients.update` | nahi |
 | `POST /admin/lawyers/{id}/suspend` | Lawyer suspend | `lawyers.update` | zaroori |
 | `POST /admin/lawyers/{id}/activate` | Lawyer dobara active | `lawyers.update` | nahi |
+| `POST /admin/lawyers/{id}/approve` | Lawyer verify karo - tabhi woh app mein login kar sakta hai | `lawyers.update` | nahi |
+| `POST /admin/lawyers/{id}/reject` | Lawyer ki verification request reject karo | `lawyers.update` | zaroori |
 
-Ek URL se sirf usi type ka account milta hai: client ke URL par lawyer ka id dene par `404`, aur ulta bhi. Admin accounts in URLs se kabhi chhue nahi ja sakte.
+Ek URL se sirf usi type ka account milta hai: client ke URL par lawyer ka id dene par `404`, aur ulta bhi. Admin accounts in URLs se kabhi chhue nahi ja sakte. `approve`/`reject` sirf Lawyer ke URL se kaam karte hain (client ke URL par `404`).
 
 ### 5.1 Suspend - `POST /admin/clients/{id}/suspend`
 
@@ -242,7 +245,51 @@ Response `200`:
 
 Pehle se active account par `422`: `{ "message": "This account is already active." }`. Inactive ya suspended dono ko activate kar sakte hain.
 
-### 5.3 Common errors (sab 4 endpoints par)
+### 5.3 Approve - `POST /admin/lawyers/{id}/approve`
+
+Request: body nahi chahiye.
+
+Response `200`:
+```json
+{
+  "message": "Advocate approved.",
+  "data": { "status": "active", "verification_status": "verified" }
+}
+```
+
+Approve hone par:
+- `lawyer_profiles.verification_status` `verified` ho jaata hai, `verified_at` set hota hai.
+- Lawyer ab login kar sakta hai (`03-mobile-api.md` ka `lawyer_not_verified` ab nahi aayega).
+- Lawyer ko **email** jaata hai ("Your CaseHub advocate account has been approved") aur app ke andar ek in-app notification bhi milti hai (jo login karte hi dikhegi).
+- `account_actions` mein `lawyer_approved` entry banti hai.
+
+Response `422` (pehle se verified): `{ "message": "This advocate is already verified." }`
+
+### 5.4 Reject - `POST /admin/lawyers/{id}/reject`
+
+Request:
+```json
+{ "reason": "Bar council ID could not be verified" }
+```
+
+Response `200`:
+```json
+{
+  "message": "Advocate rejected.",
+  "data": { "status": "active", "verification_status": "rejected" }
+}
+```
+
+Reject hone par:
+- `lawyer_profiles.verification_status` `rejected` ho jaata hai. Account suspend nahi hota (`users.status` nahi badalta) - bas login block ho jaata hai verification ki wajah se.
+- Lawyer ko **email** jaata hai reason ke saath (koi in-app notification nahi, kyunki reject hone ke baad woh kabhi login hi nahi kar sakta app mein - database notification kabhi dikhti hi nahi).
+- `account_actions` mein `lawyer_rejected` entry banti hai, reason ke saath.
+
+Response `422` (reason nahi diya, ya pehle se rejected) - suspend jaisa hi format.
+
+Ek rejected lawyer ko baad mein **approve** kiya ja sakta hai (koi permanent lock nahi hai).
+
+### 5.5 Common errors (sab 6 endpoints par)
 
 | Status | Kab | Response |
 |---|---|---|
@@ -264,6 +311,8 @@ Har client/lawyer ke details page par **"Account History"** card hai: kaun sa ac
 |---|---|
 | `suspended` | Account suspend |
 | `activated` | Account activate |
+| `lawyer_approved` | Advocate verification approve |
+| `lawyer_rejected` | Advocate verification reject |
 
 ---
 

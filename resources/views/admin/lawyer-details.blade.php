@@ -8,6 +8,7 @@
   $canModerate = $admin->hasPermission('lawyers.update');
   $profile = $lawyer->lawyerProfile;
   $status = $lawyer->status;
+  $verification = $profile->verification_status;
 @endphp
 
 <div class="page-head">
@@ -75,6 +76,17 @@
         <span>Account Status</span>
         <strong><span class="status status-{{ $status->value }}">{{ ucfirst($status->value) }}</span></strong>
       </div>
+      <div class="info-item">
+        <span>Verification Status</span>
+        @php
+          $verificationClass = match ($verification) {
+            \App\Enums\VerificationStatus::Verified => 'status-active',
+            \App\Enums\VerificationStatus::Rejected => 'status-rejected',
+            default => 'status-pending',
+          };
+        @endphp
+        <strong><span class="status {{ $verificationClass }}">{{ ucfirst($verification->value) }}</span></strong>
+      </div>
     </div>
 
     @if ($profile->bio)
@@ -96,7 +108,27 @@
     </div>
 
     @if ($canModerate)
+      @if ($verification !== \App\Enums\VerificationStatus::Verified)
+        <p class="empty-msg" style="margin-bottom: 16px;">This advocate cannot sign in until their profile is approved.</p>
+      @endif
       <div class="inline-btns">
+        @if ($verification !== \App\Enums\VerificationStatus::Verified)
+          <button type="button" class="btn-inline btn-block-primary" data-moderate="approve"
+                  data-url="{{ route('admin.lawyers.approve', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
+            Approve Advocate
+          </button>
+        @endif
+        @if ($verification !== \App\Enums\VerificationStatus::Rejected)
+          <button type="button" class="btn-inline btn-danger-soft" data-moderate="reject"
+                  data-url="{{ route('admin.lawyers.reject', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+            Reject Advocate
+          </button>
+        @endif
+      </div>
+
+      <div class="inline-btns" style="margin-top: 12px;">
         @if ($status !== \App\Enums\UserStatus::Suspended)
           <button type="button" class="btn-inline btn-danger-soft" data-moderate="suspend"
                   data-url="{{ route('admin.lawyers.suspend', $lawyer->user_id) }}" data-name="{{ $lawyer->name }}">
