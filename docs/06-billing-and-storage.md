@@ -4,7 +4,7 @@ Monthly, auto-recurring storage subscriptions for clients (lawyers don't have pl
 
 > Frontend/mobile dev ho aur app mein yeh feature banana hai? `07-billing-implementation-guide.md` seedha usi ke liye hai - screens, flows, aur har state mein UI kaisa dikhe.
 
-> **No payment gateway is wired yet.** Everything below (state machine, quota tracking, grace period, admin UI) is real and tested. The actual charge call goes through `App\Contracts\BillingGateway`, currently bound to `LogBillingGateway` (logs instead of charging, refuses to run in production unless `BILLING_ALLOW_LOG_IN_PRODUCTION=true` - a stop-gap, no real money moves either way). See [§5](#5-wiring-a-real-payment-gateway) before going live.
+> **No payment gateway is wired yet.** Everything below (state machine, quota tracking, grace period, admin UI) is real and tested. The actual charge call goes through `App\Contracts\BillingGateway`, currently bound to `LogBillingGateway` - it logs every charge as "successful" instead of actually charging a card, in every environment including production. **No real money moves until a real gateway is wired** - see [§5](#5-wiring-a-real-payment-gateway) before relying on this for real payments.
 
 ---
 
@@ -97,17 +97,7 @@ No gateway is chosen yet (Paystack and Flutterwave are the common Nigerian optio
 2. Bind it in `AppServiceProvider::register()` based on `config('billing.driver')`, same pattern as `SmsGateway`/`PushGateway`.
 3. Set `BILLING_DRIVER` in `.env` to your new driver name.
 
-### Stop-gap: using the app in production before a gateway is chosen
-
-By default `LogBillingGateway` refuses to run in production (throws `RuntimeException`, `500` on every subscribe/upgrade/downgrade) so a forgotten/missing gateway fails loudly instead of silently "succeeding" without moving any money.
-
-If you need subscribe/upgrade/downgrade to actually work on production *right now*, before a real gateway is wired, set in the live `.env`:
-
-```
-BILLING_ALLOW_LOG_IN_PRODUCTION=true
-```
-
-then `php artisan config:clear` (or re-cache config) on that server. Every charge will then "succeed" exactly like in dev - **no real money is ever collected** - and each one logs a `warning`-level line (`[billing:log] running in production with no real payment gateway...`) so it stays visible in the logs. Set it back to `false` (or just finish §5 above) before relying on this for real customers, since nothing is actually being charged while it's on.
+Until that's done, `LogBillingGateway` stays bound everywhere (including production) and every subscribe/upgrade/downgrade "succeeds" without charging a real card - it logs a `warning`-level line in production (`[billing:log] ... NO REAL GATEWAY CONFIGURED, no money moved.`) on every charge so that stays visible in the logs. No `.env` change is needed for the API to work; the gap is simply that no real money is collected until a real gateway is wired.
 
 `SubscriptionService` always charges **before** touching any DB state, and never inside a DB transaction - a successful charge must never be undone by an unrelated DB failure, and a DB failure must never leave a subscription row changed without a matching successful charge.
 
