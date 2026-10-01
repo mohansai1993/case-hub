@@ -56,18 +56,18 @@ class PasswordResetTest extends ApiTestCase
         $this->postJson('/api/v1/auth/login', ['type' => 'client', 'identifier' => 'rahul@example.com', 'password' => self::NEW_PASSWORD])->assertOk();
     }
 
-    public function test_the_otp_goes_to_the_registered_mobile_even_when_asked_by_email(): void
+    public function test_otp_is_emailed_for_an_email_identifier(): void
     {
         $this->postJson(self::SEND, ['identifier' => 'rahul@example.com'])->assertOk();
 
-        Notification::assertSentTo($this->user, VerificationCode::class, fn ($n, $channels) => in_array('App\Notifications\Channels\SmsChannel', $channels, true));
+        Notification::assertSentTo($this->user, VerificationCode::class, fn ($n, $channels) => $channels === ['mail']);
     }
 
-    public function test_can_also_be_started_from_the_mobile_number(): void
+    public function test_otp_is_texted_for_a_mobile_identifier(): void
     {
         $this->postJson(self::SEND, ['identifier' => '+91 98765 43210'])->assertOk();
 
-        Notification::assertSentToTimes($this->user, VerificationCode::class, 1);
+        Notification::assertSentTo($this->user, VerificationCode::class, fn ($n, $channels) => in_array('App\Notifications\Channels\SmsChannel', $channels, true));
     }
 
     public function test_the_answer_is_identical_for_unknown_and_unverified_accounts(): void

@@ -9,7 +9,7 @@ use App\Http\Requests\Api\Auth\VerifyResetOtpRequest;
 use App\Services\AppAuth\AppPasswordResetService;
 use Illuminate\Http\JsonResponse;
 
-/** "Forgot password?" - OTP to the registered mobile, then a new password. */
+/** "Forgot password?" - OTP to whichever channel the identifier matches, then a new password. */
 class PasswordResetController extends Controller
 {
     public function __construct(private readonly AppPasswordResetService $service)
@@ -22,7 +22,7 @@ class PasswordResetController extends Controller
         $this->service->sendOtp($request->identifier());
 
         return response()->json([
-            'message' => 'If the account exists, an OTP has been sent to its registered mobile number.',
+            'message' => 'If the account exists, an OTP has been sent.',
             'data' => ['resend_in' => (int) config('otp.app.resend_after')],
         ]);
     }

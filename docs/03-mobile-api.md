@@ -517,7 +517,7 @@ Response `200`:
 
 ### 4.10 `POST /auth/forgot-password`
 
-Login screen ka "Forgot Password?". Email **ya** mobile de sakte ho, par OTP hamesha **us account ke registered mobile** par jaata hai (SMS se) - ye registration-verify wali email OTP se alag flow hai.
+Login screen ka "Forgot Password?". Email **ya** mobile de sakte ho - jo bhi identifier do, OTP usi channel par jaata hai (email do toh email, mobile do toh SMS) - admin panel ke forgot-password jaisa hi rule.
 
 Request:
 ```json
@@ -527,7 +527,7 @@ Request:
 Response `200` (**hamesha yahi**, account ho ya na ho; suspended/unverified account ko OTP nahi jaata par jawab wahi rehta hai):
 ```json
 {
-  "message": "If the account exists, an OTP has been sent to its registered mobile number.",
+  "message": "If the account exists, an OTP has been sent.",
   "data": { "resend_in": 59 }
 }
 ```
@@ -601,8 +601,8 @@ Response `422` (token galat / expire / pehle use ho gaya):
 
 ## 5. Kuch aur zaroori baatein
 
-- **Registration OTP ab EMAIL se jaata hai** (`MAIL_MAILER` config se). Forgot-password ka OTP abhi bhi **mobile par SMS** se jaata hai - do alag delivery channels hain.
-- **Dev mein dekhne ka tareeka:** `MAIL_MAILER=log` ho toh registration ka OTP `storage/logs/laravel.log` mein mail ki tarah dikhta hai (subject "Your CaseHub verification code"). SMS provider abhi nahi laga hai, isliye forgot-password ka OTP bhi (dev mein) `[sms:log] to 9876543210: ...` is tarah log mein hi dikhta hai. Production mein ye dono asli provider (SMTP / SMS gateway) na jude toh error dete hain.
+- **Registration OTP hamesha EMAIL se jaata hai** (`MAIL_MAILER` config se) - yeh identifier-independent hai, verification email par hi hoti hai. **Forgot-password ka OTP identifier follow karta hai**: email do toh email (`MAIL_MAILER`), mobile do toh SMS (`App\Contracts\SmsGateway`).
+- **Dev mein dekhne ka tareeka:** `MAIL_MAILER=log` ho toh mail wala OTP `storage/logs/laravel.log` mein mail ki tarah dikhta hai (subject "Your CaseHub verification code"). SMS provider abhi nahi laga hai (`App\Services\Sms\LogSmsGateway` sirf ek dev stand-in hai), isliye mobile se forgot-password try karne par (dev mein) `[sms:log] to 9876543210: ...` is tarah log mein dikhta hai, aur **production mein yeh error dega** jab tak real `SmsGateway` implement + bind na ho (`config/otp.php` ka comment dekho).
 - **Photo URL:** `image_url` ek poora URL hota hai (`APP_URL` par based). Photo dikhne ke liye `php artisan storage:link` ek baar chalana zaroori hai.
 - **Admin ka asar:** admin panel se client/lawyer suspend hote hi uske saare tokens delete ho jaate hain, aur woh dobara login nahi kar sakta (`403 account_inactive`) jab tak admin activate na kare. Dono, Client aur Lawyer, ke liye admin ke paas yehi ek control hai (Suspend/Activate) - lawyer ka `verification_status` admin se ab manage nahi hota.
 - **`APP_DEBUG=false` production mein zaroori:** `true` hone par error responses mein file path aur stack trace bhi aa jaate hain. Upar ke examples `false` waali (safe) shape dikhate hain.
