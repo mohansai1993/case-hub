@@ -98,11 +98,46 @@ Response `422` (missing / galat type / size se bada):
 
 ---
 
-## 3. Lawyer practice profile update (sirf Lawyer)
+## 3. Lawyer practice profile - get aur update (sirf Lawyer)
 
-`PUT /api/v1/profile/lawyer`
+Registration ke time diye gaye location / years of experience / practice areas (specialization) / bio - yahan se dekho aur badlo. **Client ke liye nahi hai** (`403` dono endpoints par).
 
-Registration ke time diye gaye location / years of experience / practice areas (specialization) / bio - yeh sab baad mein isi endpoint se update hote hain. **Client ke liye nahi hai** (`403`).
+### 3.1 `GET /api/v1/profile/lawyer` - Dekho
+
+Edit screen kholte hi current values se form pre-fill karne ke liye.
+
+Response `200`:
+```json
+{
+  "data": {
+    "user": {
+      "id": "448dc022-5370-43e7-bc16-a60c8a77427e",
+      "type": "lawyer",
+      "name": "Adv. Sarah Jenkins",
+      "email": "sarah@lawfirm.com",
+      "mobile": "9876543210",
+      "image_url": null,
+      "email_verified": true,
+      "status": "active",
+      "lawyer": {
+        "location": "Pune, India",
+        "years_of_experience": 5,
+        "bio": "Family law.",
+        "verification_status": "verified",
+        "practice_areas": [
+          { "id": 2, "name": "Severance" }
+        ]
+      }
+    }
+  }
+}
+```
+
+Response `403` (client ka token): `{ "message": "Only lawyers have a practice profile." }`
+
+> Note: yehi data `GET /auth/me` se bhi milta hai (`user.lawyer` key). Yeh endpoint sirf alag se dedicated hai taaki edit-profile screen `PUT` wale isi path se GET bhi kar sake - dono use karne mein koi fark nahi hai, jo tumhare frontend code ke liye saaf ho wo use karo.
+
+### 3.2 `PUT /api/v1/profile/lawyer` - Update karo
 
 Request (saare fields `bio` chhodke required - jaisa registration mein tha):
 ```json

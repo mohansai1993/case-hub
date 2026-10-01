@@ -8,6 +8,7 @@ use App\Models\User;
 
 class LawyerProfileTest extends ApiTestCase
 {
+    private const SHOW = '/api/v1/profile/lawyer';
     private const UPDATE = '/api/v1/profile/lawyer';
 
     private function payload(array $override = []): array
@@ -19,6 +20,43 @@ class LawyerProfileTest extends ApiTestCase
             'bio' => 'Specializing in corporate governance.',
         ], $override);
     }
+
+    // ---- Show ---------------------------------------------------------------
+
+    public function test_guests_cannot_view_the_lawyer_profile(): void
+    {
+        $this->getJson(self::SHOW)->assertStatus(401);
+    }
+
+    public function test_clients_cannot_view_a_lawyer_profile(): void
+    {
+        $client = User::factory()->create();
+
+        $this->getJson(self::SHOW, $this->bearer($client))
+            ->assertForbidden()
+            ->assertJsonPath('message', 'Only lawyers have a practice profile.');
+    }
+
+    public function test_a_lawyer_can_view_their_own_profile(): void
+    {
+        $lawyer = User::factory()->lawyer(VerificationStatus::Verified)->create([
+            'name' => 'Adv. Sarah Jenkins',
+        ]);
+        $severance = PracticeArea::firstWhere('slug', 'severance');
+        $lawyer->lawyerProfile->update(['location' => 'Pune, India', 'years_of_experience' => 5, 'bio' => 'Family law.']);
+        $lawyer->practiceAreas()->sync([$severance->id]);
+
+        $response = $this->getJson(self::SHOW, $this->bearer($lawyer))->assertOk();
+
+        $response->assertJsonPath('data.user.name', 'Adv. Sarah Jenkins');
+        $response->assertJsonPath('data.user.lawyer.location', 'Pune, India');
+        $response->assertJsonPath('data.user.lawyer.years_of_experience', 5);
+        $response->assertJsonPath('data.user.lawyer.bio', 'Family law.');
+        $response->assertJsonPath('data.user.lawyer.verification_status', 'verified');
+        $response->assertJsonPath('data.user.lawyer.practice_areas.0.id', $severance->id);
+    }
+
+    // ---- Update -----------------------------------------------------------------
 
     public function test_guests_cannot_update_the_lawyer_profile(): void
     {

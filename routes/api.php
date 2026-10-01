@@ -71,6 +71,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
 
         Route::post('profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
+        Route::get('profile/lawyer', [ProfileController::class, 'showLawyerProfile'])->name('profile.lawyer.show');
         Route::put('profile/lawyer', [ProfileController::class, 'updateLawyerProfile'])->name('profile.lawyer');
 
         Route::prefix('notifications')->name('notifications.')->group(function () {

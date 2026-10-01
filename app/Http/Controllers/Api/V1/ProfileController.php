@@ -7,6 +7,7 @@ use App\Http\Requests\Api\Profile\UpdateLawyerProfileRequest;
 use App\Http\Requests\Api\Profile\UpdatePhotoRequest;
 use App\Http\Resources\UserResource;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 /** Self-service profile actions for the signed-in client or lawyer. */
@@ -31,6 +32,20 @@ class ProfileController extends Controller
         return response()->json([
             'message' => 'Profile photo updated.',
             'data' => ['image_url' => $user->imageUrl()],
+        ]);
+    }
+
+    /** Same shape as GET/PUT /auth/me's "lawyer" block, as its own endpoint to pre-fill the edit form. */
+    public function showLawyerProfile(Request $request): JsonResponse
+    {
+        $user = $request->user('sanctum');
+
+        if (! $user->isLawyer()) {
+            return response()->json(['message' => 'Only lawyers have a practice profile.'], 403);
+        }
+
+        return response()->json([
+            'data' => ['user' => new UserResource($user->load('lawyerProfile', 'practiceAreas'))],
         ]);
     }
 
