@@ -35,6 +35,6 @@ php artisan reverb:start        # real-time chat ke liye (alag terminal mein) - 
 1. `.env` mein `APP_DEBUG=false` rakho. `true` hone par error responses mein file paths aur stack trace dikhte hain (API ke 404 / 429 jaise errors mein bhi).
 2. HTTPS lagao aur `SESSION_SECURE_COOKIE=true` karo.
 3. SMS provider abhi choose nahi hua (details `01-project-overview.md` mein).
-4. **Payment gateway bhi abhi choose nahi hua** (Paystack/Flutterwave) - storage-plan billing `BILLING_DRIVER=log` par hai, production mein charge nahi karega (jaan-boojh kar error dega). Dekho `06-billing-and-storage.md` section 5.
+4. **Payment gateway bhi abhi choose nahi hua** (Paystack/Flutterwave) - storage-plan billing `BILLING_DRIVER=log` par hai, production mein by default charge nahi karega (jaan-boojh kar error dega). Stop-gap ke liye `BILLING_ALLOW_LOG_IN_PRODUCTION=true` set kar sakte ho taaki API chale, lekin isme **koi real paisa charge nahi hota** - dekho `06-billing-and-storage.md` section 5.
 5. `composer audit` chalao: packages mein security advisories dikh rahi hain, update plan karo.
 6. `php artisan reverb:start` ek long-running process hai (supervisor/systemd se chalao, `php artisan serve` ki tarah request-response par nahi chalta). Apne khud ke random `REVERB_APP_ID`/`KEY`/`SECRET` banao - `.env` mein jo hain woh sirf local dev ke liye hain.

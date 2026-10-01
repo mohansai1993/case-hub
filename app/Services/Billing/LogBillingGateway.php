@@ -35,10 +35,23 @@ class LogBillingGateway implements BillingGateway
         Log::info("[billing:log] cancelled recurring billing for client {$subscription->client_id}");
     }
 
+    /**
+     * Refuses to run in production unless explicitly overridden via
+     * BILLING_ALLOW_LOG_IN_PRODUCTION - an unconfigured gateway should fail
+     * loudly by default rather than silently taking no one's money while
+     * pretending it did. When overridden, it logs as a warning (not info)
+     * so "this charge was fake" stays visible in production logs.
+     */
     private function guardProduction(): void
     {
-        if (app()->isProduction()) {
+        if (! app()->isProduction()) {
+            return;
+        }
+
+        if (! config('billing.allow_log_driver_in_production')) {
             throw new RuntimeException('No payment gateway is configured. Bind an App\Contracts\BillingGateway implementation.');
         }
+
+        Log::warning('[billing:log] running in production with no real payment gateway - this charge is fake, no money moved.');
     }
 }
