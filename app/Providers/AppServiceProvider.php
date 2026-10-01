@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Contracts\BillingGateway;
 use App\Contracts\PushGateway;
 use App\Contracts\SmsGateway;
+use App\Services\Billing\LogBillingGateway;
 use App\Services\Push\FirebasePushGateway;
 use App\Services\Push\LogPushGateway;
 use App\Services\Sms\LogSmsGateway;
@@ -26,6 +28,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(PushGateway::class, match (config('firebase.driver')) {
             'firebase' => FirebasePushGateway::class,
             default => LogPushGateway::class,
+        });
+
+        // Swap this binding for a real provider (Paystack, Flutterwave, ...) when chosen.
+        $this->app->bind(BillingGateway::class, match (config('billing.driver')) {
+            'log' => LogBillingGateway::class,
+            default => LogBillingGateway::class,
         });
     }
 

@@ -82,8 +82,8 @@
               <td class="col-check"><input type="checkbox" data-check="{{ $plan->id }}" aria-label="Select {{ $plan->name }}" @disabled(! $plan->is_active) /></td>
               <td><strong>{{ $plan->name }}</strong><small class="clip-2">{{ $plan->description }}</small></td>
               <td><span class="count-pill">{{ $plan->storageLabel() }}</span></td>
-              <td><strong>&#8377;{{ number_format($plan->price) }}</strong></td>
-              <td>One-time payment<small>Non-expiring</small></td>
+              <td><strong>{{ config('billing.currency_symbol') }}{{ number_format($plan->price) }}</strong></td>
+              <td>Monthly<small>Auto-renewing</small></td>
               <td><span class="status {{ $plan->is_active ? 'status-active' : 'status-inactive' }}" data-status>{{ $plan->is_active ? 'Active' : 'Inactive' }}</span></td>
               <td class="col-actions">
                 <div class="row-actions">

@@ -4,6 +4,8 @@ namespace Tests\Feature\Admin;
 
 use App\Models\Admin;
 use App\Models\Plan;
+use App\Models\User;
+use App\Services\Billing\SubscriptionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -67,6 +69,50 @@ class PlanManagementTest extends TestCase
         Plan::factory()->create(['name' => 'Enterprise Tier']);
 
         $this->asSuper()->get(route('admin.subscriptions'))->assertSee('Enterprise Tier');
+    }
+
+    // ---- Client subscriptions list (real data, no more dummy rows) --------------------
+
+    public function test_the_client_subscriptions_list_shows_real_subscribers_only(): void
+    {
+        $plan = Plan::factory()->create();
+        $subscribed = User::factory()->create(['name' => 'Rahul Sharma']);
+        $notSubscribed = User::factory()->create(['name' => 'Unsubscribed Client']);
+        app(SubscriptionService::class)->subscribe($subscribed, $plan);
+
+        $this->asSuper()->get(route('admin.subscriptions'))
+            ->assertSee('Rahul Sharma')
+            ->assertDontSee('Unsubscribed Client')
+            ->assertDontSee('Elena Ramirez'); // the old dummy row
+    }
+
+    public function test_the_client_subscriptions_list_can_be_searched_and_filtered(): void
+    {
+        $planA = Plan::factory()->create(['name' => 'Basic']);
+        $planB = Plan::factory()->create(['name' => 'Standard']);
+        $alice = User::factory()->create(['name' => 'Alice Example', 'email' => 'alice@example.com']);
+        $bob = User::factory()->create(['name' => 'Bob Example']);
+        app(SubscriptionService::class)->subscribe($alice, $planA);
+        app(SubscriptionService::class)->subscribe($bob, $planB);
+
+        $this->asSuper()->get(route('admin.subscriptions', ['q' => 'alice']))
+            ->assertSee('Alice Example')->assertDontSee('Bob Example');
+
+        $this->asSuper()->get(route('admin.subscriptions', ['plan' => $planB->id]))
+            ->assertSee('Bob Example')->assertDontSee('Alice Example');
+
+        $this->asSuper()->get(route('admin.subscriptions', ['status' => 'restricted']))
+            ->assertDontSee('Alice Example')->assertDontSee('Bob Example');
+    }
+
+    public function test_viewing_a_subscription_links_to_the_real_client_details_page(): void
+    {
+        $plan = Plan::factory()->create();
+        $client = User::factory()->create();
+        app(SubscriptionService::class)->subscribe($client, $plan);
+
+        $this->asSuper()->get(route('admin.subscriptions'))
+            ->assertSee(route('admin.client-details', $client->user_id), false);
     }
 
     // ---- Create -----------------------------------------------------------------

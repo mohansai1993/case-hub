@@ -101,6 +101,12 @@ class User extends Authenticatable
         return $this->hasMany(DeviceToken::class, 'user_id', 'user_id');
     }
 
+    /** Only clients have one; a lawyer's is always null. */
+    public function subscription(): HasOne
+    {
+        return $this->hasOne(ClientSubscription::class, 'client_id', 'user_id');
+    }
+
     // -- Scopes / lookups ---------------------------------------------------------
 
     public function scopeClients(Builder $query): Builder

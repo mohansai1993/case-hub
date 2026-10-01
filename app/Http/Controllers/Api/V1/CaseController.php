@@ -7,12 +7,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Cases\StoreCaseRequest;
 use App\Http\Resources\CaseResource;
 use App\Models\LegalCase;
+use App\Services\Billing\StorageQuotaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class CaseController extends Controller
 {
     private const PER_PAGE = 20;
+
+    public function __construct(private readonly StorageQuotaService $quota)
+    {
+    }
 
     /** Cases the signed-in user is part of, as either the client or the advocate. */
     public function index(Request $request): JsonResponse
@@ -37,6 +42,13 @@ class CaseController extends Controller
 
         if (! $user->isClient()) {
             return response()->json(['message' => 'Only clients can open a case.'], 403);
+        }
+
+        if (! $this->quota->canCreateNewContent($user)) {
+            return response()->json([
+                'message' => 'You need an active storage plan with available space to submit a case with evidence.',
+                'code' => 'storage_full',
+            ], 422);
         }
 
         $case = LegalCase::create([

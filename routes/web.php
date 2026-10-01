@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\AccountActionController;
 use App\Http\Controllers\Admin\AlertController;
 use App\Http\Controllers\Admin\ClientController;
+use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\LawyerController;
 use App\Http\Controllers\Admin\NotificationController;
@@ -77,7 +78,7 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
             Route::post('/{id}/read', [AlertController::class, 'markRead'])->name('read');
         });
 
-        Route::view('/dashboard', 'admin.dashboard')
+        Route::get('/dashboard', DashboardController::class)
             ->middleware('permission:dashboard.view')->name('dashboard');
 
         // Clients: list / details need clients.view; suspend / activate need clients.update.
@@ -112,10 +113,8 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
                 ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.activate');
         });
 
-        Route::middleware('permission:subscriptions.view')->group(function () {
-            Route::get('/subscriptions', [PlanController::class, 'index'])->name('subscriptions');
-            Route::view('/subscription-details', 'admin.subscription-details')->name('subscription-details');
-        });
+        Route::get('/subscriptions', [PlanController::class, 'index'])
+            ->middleware('permission:subscriptions.view')->name('subscriptions');
         Route::middleware('permission:subscriptions.manage')->group(function () {
             Route::get('/plans/create', [PlanController::class, 'create'])->name('create-plan');
             Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');

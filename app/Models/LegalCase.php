@@ -38,6 +38,11 @@ class LegalCase extends Model
         return $this->hasMany(CaseMessage::class, 'case_id');
     }
 
+    public function documents(): HasMany
+    {
+        return $this->hasMany(CaseDocument::class, 'case_id');
+    }
+
     public function isParticipant(User $user): bool
     {
         return $this->client_id === $user->user_id || $this->advocate_id === $user->user_id;

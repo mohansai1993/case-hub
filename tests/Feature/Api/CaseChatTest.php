@@ -5,13 +5,21 @@ namespace Tests\Feature\Api;
 use App\Enums\CaseStatus;
 use App\Events\MessageSent;
 use App\Models\LegalCase;
+use App\Models\Plan;
 use App\Models\User;
 use App\Notifications\NewCaseMessage;
+use App\Services\Billing\SubscriptionService;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 
 class CaseChatTest extends ApiTestCase
 {
+    /** Submitting a case (with evidence) requires an active storage plan. */
+    private function givePlan(User $client): void
+    {
+        app(SubscriptionService::class)->subscribe($client, Plan::factory()->create());
+    }
+
     private function openCase(User $client, User $advocate, string $status = 'accepted'): LegalCase
     {
         $case = LegalCase::create([
@@ -30,6 +38,7 @@ class CaseChatTest extends ApiTestCase
     {
         $client = User::factory()->create();
         $advocate = User::factory()->lawyer()->create();
+        $this->givePlan($client);
 
         $this->postJson('/api/v1/cases', ['advocate_id' => $advocate->user_id, 'title' => 'Wrongful termination'], $this->bearer($client))
             ->assertCreated()
@@ -51,6 +60,17 @@ class CaseChatTest extends ApiTestCase
 
         $this->postJson('/api/v1/cases', ['advocate_id' => $other->user_id, 'title' => 'x'], $this->bearer($advocate))
             ->assertForbidden();
+    }
+
+    public function test_a_client_without_a_storage_plan_cannot_open_a_case(): void
+    {
+        $client = User::factory()->create();
+        $advocate = User::factory()->lawyer()->create();
+
+        $this->postJson('/api/v1/cases', ['advocate_id' => $advocate->user_id, 'title' => 'x'], $this->bearer($client))
+            ->assertStatus(422)->assertJsonPath('code', 'storage_full');
+
+        $this->assertDatabaseCount('cases', 0);
     }
 
     public function test_advocate_id_must_be_a_lawyer(): void

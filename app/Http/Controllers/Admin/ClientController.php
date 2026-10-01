@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\AccountListRequest;
 use App\Models\User;
+use App\Services\Billing\StorageQuotaService;
 use Illuminate\View\View;
 
 class ClientController extends Controller
@@ -28,11 +29,18 @@ class ClientController extends Controller
         ]);
     }
 
-    public function show(string $id): View
+    public function show(string $id, StorageQuotaService $quota): View
     {
-        $client = User::clients()->with('accountActions.admin')->findOrFail($id);
+        $client = User::clients()->with([
+            'accountActions.admin',
+            'subscription.plan',
+            'subscription.charges' => fn ($query) => $query->latest()->limit(5),
+        ])->findOrFail($id);
 
-        return view('admin.client-details', ['client' => $client]);
+        return view('admin.client-details', [
+            'client' => $client,
+            'storageUsedBytes' => $client->subscription ? $quota->usedBytes($client) : null,
+        ]);
     }
 
     private function search($query, string $term)

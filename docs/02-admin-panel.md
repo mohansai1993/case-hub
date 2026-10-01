@@ -12,14 +12,13 @@ Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pa
 |---|---|---|
 | `/` | Login | (guest) |
 | `/admin` | Login ke baad ka home. Pehle allowed section par bhej deta hai | login zaroori |
-| `/admin/dashboard` | Dashboard (abhi static) | `dashboard.view` |
+| `/admin/dashboard` | Dashboard: real client/lawyer/case/subscription counts, recent failed payments, recent platform activity | `dashboard.view` |
 | `/admin/clients` | Clients list | `clients.view` |
-| `/admin/clients/{id}` | Client details + suspend/activate | `clients.view` (dekhne ke liye), `clients.update` (buttons ke liye) |
+| `/admin/clients/{id}` | Client details + suspend/activate + unka Subscription card (plan, status, storage usage, recent billing) | `clients.view` (dekhne ke liye), `clients.update` (buttons ke liye) |
 | `/admin/lawyers` | Lawyers list | `lawyers.view` |
 | `/admin/lawyers/{id}` | Lawyer details + suspend/activate (client jaisa hi, alag se verification approve/reject nahi hai) | `lawyers.view`; `lawyers.update` |
 | `/admin/lawyers/practice-areas` | Specialization chips add/rename/activate-deactivate/delete | `lawyers.practice_areas` |
-| `/admin/subscriptions` | Subscription Plans grid (dynamic, DB-backed) + Client Subscriptions list (abhi bhi static sample data - client-to-plan assignment feature nahi bana) | `subscriptions.view` |
-| `/admin/subscription-details` | Ek client ki subscription detail (abhi static) | `subscriptions.view` |
+| `/admin/subscriptions` | Subscription Plans grid + real Client Subscriptions list (search/filter by plan/status, dono dynamic/DB-backed) | `subscriptions.view` |
 | `/admin/plans/create`, `/admin/plans/{plan}/edit` | Plan banao/edit karo: naam, storage (MB ya GB), price, description, popular tag | `subscriptions.manage` |
 | `/admin/notifications` | Notifications: draft banao, clients/lawyers select karke bhejo (in-app + push), sent history | `notifications.view`; `notifications.create` |
 | `/admin/settings` | Apna profile, password change, plan activate/deactivate + bulk deactivate (agar `subscriptions.manage` hai), account delete (Super Admin ke liye nahi dikhta), logout | `settings.view` |
@@ -39,7 +38,7 @@ Har admin/staff ke apne alerts hain - Laravel ke standard `notifications` table 
 
 **Abhi sirf ek trigger wired hai:** naya client ya lawyer register karta hai (`RegistrationService`) -> jin admins ke paas `clients.view` (client ke liye) ya `lawyers.view` (lawyer ke liye) permission hai, unko ek alert milta hai. Super Admin ko hamesha milta hai (uske paas har permission implicitly hoti hai).
 
-**"Plan leta hai" abhi wired nahi hai** - kyunki client ka kisi plan ko subscribe/purchase karne wala koi feature/table abhi codebase mein hai hi nahi (`/admin/subscriptions` ki "Client Subscriptions" list abhi bhi static sample data hai, upar dekho). Jab woh feature banega, usi `AdminAlertDispatcher` service mein ek naya method add karke easily wire ho jayega.
+**"Plan leta hai" abhi admin-bell mein wired nahi hai** - client-to-plan subscription feature khud ab ban chuka hai (dekho `docs/06-billing-and-storage.md`), bas `AdminAlertDispatcher` mein ek naya method add karke admin ko "naya subscription" alert bhejna abhi nahi joda gaya.
 
 Delivery **real-time websocket push nahi hai** - admin panel ka koi browser-side Echo/Pusher client nahi hai (Reverb sirf mobile app ke chat ke liye use hota hai). Bell icon har 20 second mein `GET /admin/alerts` poll karta hai, isliye naya alert ~20 second ke andar dikh jaata hai bina page refresh ke - zyada tar kaam ke liye yeh kaafi hai. Agar sach much instant (sub-second) websocket push chahiye, woh alag se banana padega (Reverb par ek naya private admin channel + browser mein Echo load karna).
 

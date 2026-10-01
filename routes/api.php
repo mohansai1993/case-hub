@@ -5,12 +5,14 @@ use App\Http\Controllers\Api\V1\Auth\OtpController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
 use App\Http\Controllers\Api\V1\CaseController;
+use App\Http\Controllers\Api\V1\CaseDocumentController;
 use App\Http\Controllers\Api\V1\CaseMessageController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\PracticeAreaController;
 use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\SubscriptionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -63,16 +65,29 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         });
     });
 
-    // Signed-in (push notifications)
+    // Signed-in, always reachable regardless of subscription state (a
+    // restricted client must still be able to view/manage billing and their
+    // own profile - see docs/06-billing-and-storage.md).
     Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
-        Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('device-tokens.store');
-        Route::delete('device-tokens', [DeviceTokenController::class, 'destroy'])->name('device-tokens.destroy');
-
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
 
         Route::post('profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
         Route::get('profile/lawyer', [ProfileController::class, 'showLawyerProfile'])->name('profile.lawyer.show');
         Route::put('profile/lawyer', [ProfileController::class, 'updateLawyerProfile'])->name('profile.lawyer');
+
+        Route::prefix('subscription')->name('subscription.')->group(function () {
+            Route::get('/', [SubscriptionController::class, 'show'])->name('show');
+            Route::post('/subscribe', [SubscriptionController::class, 'subscribe'])->name('subscribe');
+            Route::post('/upgrade', [SubscriptionController::class, 'upgrade'])->name('upgrade');
+            Route::post('/downgrade', [SubscriptionController::class, 'downgrade'])->name('downgrade');
+            Route::post('/cancel', [SubscriptionController::class, 'cancel'])->name('cancel');
+        });
+    });
+
+    // Signed-in, locked out entirely once a client's grace period expires.
+    Route::middleware(['auth:sanctum', 'api.active', 'subscription.active', 'throttle:api'])->group(function () {
+        Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('device-tokens.store');
+        Route::delete('device-tokens', [DeviceTokenController::class, 'destroy'])->name('device-tokens.destroy');
 
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
@@ -80,7 +95,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('read-all', [NotificationController::class, 'markAllRead'])->name('read-all');
         });
 
-        // Cases + the per-case real-time chat (see docs/04-realtime-chat.md).
+        // Cases + the per-case real-time chat (see docs/04-realtime-chat.md)
+        // + evidence documents (see docs/06-billing-and-storage.md).
         Route::prefix('cases')->name('cases.')->group(function () {
             Route::get('/', [CaseController::class, 'index'])->name('index');
             Route::post('/', [CaseController::class, 'store'])->name('store');
@@ -91,6 +107,10 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('{case}/messages', [CaseMessageController::class, 'index'])->name('messages.index');
             Route::post('{case}/messages', [CaseMessageController::class, 'store'])->name('messages.store');
             Route::post('{case}/messages/read', [CaseMessageController::class, 'markRead'])->name('messages.read');
+
+            Route::get('{case}/documents', [CaseDocumentController::class, 'index'])->name('documents.index');
+            Route::post('{case}/documents', [CaseDocumentController::class, 'store'])->name('documents.store');
+            Route::get('{case}/documents/{document}/download', [CaseDocumentController::class, 'download'])->name('documents.download');
         });
     });
 });

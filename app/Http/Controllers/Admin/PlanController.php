@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\PlanRequest;
+use App\Http\Requests\Admin\SubscriptionListRequest;
+use App\Models\ClientSubscription;
 use App\Models\Plan;
+use App\Services\Billing\StorageQuotaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,10 +15,27 @@ use Illuminate\View\View;
 
 class PlanController extends Controller
 {
-    public function index(): View
+    private const PER_PAGE = 15;
+
+    public function index(SubscriptionListRequest $request, StorageQuotaService $quota): View
     {
+        $subscriptions = ClientSubscription::with(['client', 'plan'])
+            ->when($request->search(), fn ($query, $term) => $query->whereHas('client', fn ($q) => $q
+                ->where(fn ($q) => $q
+                    ->where('name', 'like', '%' . addcslashes($term, '%_\\') . '%')
+                    ->orWhere('email', 'like', '%' . addcslashes($term, '%_\\') . '%'))))
+            ->when($request->status(), fn ($query, $status) => $query->where('status', $status->value))
+            ->when($request->planId(), fn ($query, $planId) => $query->where('plan_id', $planId))
+            ->latest('created_at')
+            ->paginate(self::PER_PAGE)
+            ->withQueryString();
+
         return view('admin.subscriptions', [
             'plans' => Plan::orderByDesc('is_popular')->orderBy('name')->get(),
+            'subscriptions' => $subscriptions,
+            'totalSubscriptions' => ClientSubscription::count(),
+            'filters' => $request->only(['q', 'status', 'plan']),
+            'quota' => $quota,
         ]);
     }
 

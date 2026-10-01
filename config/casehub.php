@@ -30,6 +30,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Case evidence documents
+    |--------------------------------------------------------------------------
+    |
+    | Private disk (not publicly browsable like profile photos) - evidence is
+    | only ever served through the authenticated download endpoint.
+    |
+    */
+
+    'case_documents' => [
+        'disk' => 'local',
+        'directory' => 'case-documents',
+        'max_kb' => 20480, // 20MB per file
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | First Super Admin (used by AdminSeeder)
     |--------------------------------------------------------------------------
     |

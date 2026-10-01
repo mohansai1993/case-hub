@@ -40,11 +40,11 @@
     <div class="form-row">
       <div class="form-label-row">
         <label for="plan-price">Price</label>
-        <span class="section-label">INR (₹)</span>
+        <span class="section-label">NGN ({{ config('billing.currency_symbol') }}) / month</span>
       </div>
       <div class="input-prefix">
-        <span>₹</span>
-        <input class="input" id="plan-price" type="number" min="0" value="{{ $plan->price ?? '' }}" placeholder="Enter price amount (e.g. 299)" />
+        <span>{{ config('billing.currency_symbol') }}</span>
+        <input class="input" id="plan-price" type="number" min="0" value="{{ $plan->price ?? '' }}" placeholder="Enter monthly price (e.g. 2999)" />
       </div>
     </div>
 
@@ -56,11 +56,11 @@
         <div class="pay-type-head">
           <span class="pill-soft pill-strong">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12l3 3 5-6"/></svg>
-            One-time payment
+            Monthly subscription
           </span>
-          <span class="section-label">Fixed Archetype</span>
+          <span class="section-label">Auto-renewing</span>
         </div>
-        <p>System storage tiers operate on a non-recurring, one-time payment structure. Document quotas remain permanently tied to client legal matter storage.</p>
+        <p>Storage tiers are billed automatically every month. A client keeps read access to existing data as long as they keep paying, but loses the ability to upload new data (and submit new cases) once their storage is full.</p>
       </div>
     </div>
 

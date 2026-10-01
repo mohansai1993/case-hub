@@ -78,6 +78,62 @@
         </div>
       </div>
     </section>
+
+    <section class="card">
+      <h2 class="card-title">
+        <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
+        Subscription
+      </h2>
+
+      @if ($client->subscription)
+        @php
+          $subscription = $client->subscription;
+          $limitBytes = $subscription->plan->storageLimitBytes();
+          $percent = $limitBytes > 0 ? min(100, round($storageUsedBytes / $limitBytes * 100)) : 0;
+        @endphp
+        <div class="info-grid">
+          <div class="info-item">
+            <span>Plan</span>
+            <strong>{{ $subscription->plan->name }} ({{ $subscription->plan->storageLabel() }})</strong>
+          </div>
+          <div class="info-item">
+            <span>Status</span>
+            <strong class="{{ $subscription->isActive() ? 'text-green' : ($subscription->isRestricted() ? 'text-red' : '') }}">
+              <span class="dot {{ $subscription->isActive() ? 'dot-green' : ($subscription->isRestricted() ? 'dot-red' : '') }}"></span>
+              {{ ucfirst($subscription->status->value) }}
+            </strong>
+          </div>
+          <div class="info-item">
+            <span>{{ $subscription->isActive() ? 'Renews' : 'Grace Ends' }}</span>
+            <strong>{{ ($subscription->isActive() ? $subscription->current_period_ends_at : $subscription->grace_ends_at)?->format('d M Y') ?? '—' }}</strong>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-label-row"><label>Storage Used</label></div>
+          <div class="storage-cell">
+            <span>{{ number_format($storageUsedBytes / (1024 ** 2), 1) }} MB <small class="inline-muted">/ {{ $subscription->plan->storageLabel() }}</small></span>
+            <div class="progress"><span style="width:{{ $percent }}%"></span></div>
+          </div>
+        </div>
+
+        @if ($subscription->charges->isNotEmpty())
+          <div class="form-row">
+            <div class="form-label-row"><label>Recent Billing</label></div>
+            <ul class="activity">
+              @foreach ($subscription->charges as $charge)
+                <li class="{{ $charge->status === 'succeeded' ? 'c-green' : 'c-red' }}">
+                  <strong>{{ config('billing.currency_symbol') }}{{ number_format($charge->amount) }} &bull; {{ ucfirst($charge->reason) }} &bull; {{ ucfirst($charge->status) }}</strong>
+                  <time>{{ $charge->created_at->format('d M Y, h:i A') }}</time>
+                </li>
+              @endforeach
+            </ul>
+          </div>
+        @endif
+      @else
+        <p class="empty-msg">This client has not subscribed to a storage plan yet.</p>
+      @endif
+    </section>
   </div>
 
   <!-- RIGHT -->

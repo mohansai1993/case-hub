@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureAdminIsActive;
+use App\Http\Middleware\EnsureSubscriptionNotRestricted;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\NoStore;
 use App\Http\Middleware\RequirePermission;
@@ -33,6 +34,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'super' => RequireSuperAdmin::class,
             'no-store' => NoStore::class,
             'api.active' => EnsureUserIsActive::class,
+            'subscription.active' => EnsureSubscriptionNotRestricted::class,
         ]);
 
         // Not signed in -> login page. Already signed in -> their home section.

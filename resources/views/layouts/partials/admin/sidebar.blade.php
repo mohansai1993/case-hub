@@ -24,7 +24,7 @@
         </a>
         @endif
         @if($admin->hasPermission('subscriptions.view'))
-        <a href="{{ route('admin.subscriptions') }}" class="nav-item {{ request()->routeIs('admin.subscriptions', 'admin.subscription-details', 'admin.create-plan') ? 'is-active' : '' }}">
+        <a href="{{ route('admin.subscriptions') }}" class="nav-item {{ request()->routeIs('admin.subscriptions', 'admin.create-plan', 'admin.plans.edit') ? 'is-active' : '' }}">
           <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
           Subscriptions
         </a>

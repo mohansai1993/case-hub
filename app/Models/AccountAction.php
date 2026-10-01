@@ -24,6 +24,11 @@ class AccountAction extends Model
         return $this->belongsTo(Admin::class);
     }
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
     public function label(): string
     {
         return match ($this->action) {

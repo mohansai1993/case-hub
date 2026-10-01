@@ -12,3 +12,6 @@ Schedule::command('sanctum:prune-expired --hours=24')->daily();
 Schedule::call(fn () => UserOtp::where('expires_at', '<', now()->subDay())->delete())
     ->name('prune-user-otps')
     ->daily();
+
+// Cancelled subscriptions whose 7-day grace period has run out -> Restricted.
+Schedule::command('subscriptions:expire-grace-periods')->daily();
