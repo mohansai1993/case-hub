@@ -46,6 +46,23 @@ class DashboardTest extends TestCase
         $response->assertDontSee('Adv. Sarah Jenkins'); // the old dummy pending-action row
     }
 
+    public function test_lawyer_account_buckets_are_mutually_exclusive_and_cover_every_lawyer(): void
+    {
+        User::factory()->lawyer(VerificationStatus::Verified)->create();
+        User::factory()->lawyer(VerificationStatus::Pending)->create();
+        // Verified but also suspended - must count as suspended only, not both.
+        User::factory()->lawyer(VerificationStatus::Verified)->suspended()->create();
+
+        $response = $this->asSuper()->get(route('admin.dashboard'))->assertOk();
+
+        $response->assertSeeInOrder(['Lawyer Accounts', '3']);
+        $response->assertSeeInOrder(['Verified:', '1']);
+        $response->assertSeeInOrder(['Pending:', '1']);
+        $response->assertSeeInOrder(['Suspended:', '1']);
+        $response->assertDontSee('Rejected:');
+        $response->assertDontSee('Inactive:');
+    }
+
     public function test_case_overview_reflects_real_statuses(): void
     {
         $client = User::factory()->create();

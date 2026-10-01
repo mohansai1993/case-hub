@@ -108,7 +108,6 @@
         </div>
         <div class="acc-meta">
           <span>Active: <b class="text-green">{{ number_format($clientStats['active']) }}</b></span>
-          <span>Inactive: <b>{{ number_format($clientStats['inactive']) }}</b></span>
           <span>Suspended: <b class="text-red">{{ number_format($clientStats['suspended']) }}</b></span>
         </div>
       </div>

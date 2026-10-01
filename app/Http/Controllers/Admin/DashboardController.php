@@ -43,24 +43,38 @@ class DashboardController extends Controller
         ]);
     }
 
-    /** @return array{total: int, active: int, inactive: int, suspended: int} */
+    /**
+     * No admin action ever sets a client to Inactive (only suspend/activate
+     * exist), so that bucket isn't shown here - it would always read 0 and
+     * imply a feature that doesn't exist.
+     *
+     * @return array{total: int, active: int, suspended: int}
+     */
     private function clientStats(): array
     {
         return [
             'total' => User::clients()->count(),
             'active' => User::clients()->where('status', UserStatus::Active)->count(),
-            'inactive' => User::clients()->where('status', UserStatus::Inactive)->count(),
             'suspended' => User::clients()->where('status', UserStatus::Suspended)->count(),
         ];
     }
 
-    /** @return array{total: int, verified: int, pending: int, suspended: int} */
+    /**
+     * No admin action ever rejects a lawyer (only suspend/activate exist),
+     * so "rejected" isn't shown here - it would always read 0 and imply a
+     * feature that doesn't exist. Suspended takes priority over verification
+     * status so a verified-but-suspended lawyer isn't double-counted.
+     *
+     * @return array{total: int, verified: int, pending: int, suspended: int}
+     */
     private function lawyerStats(): array
     {
+        $notSuspended = fn () => User::lawyers()->where('status', '!=', UserStatus::Suspended);
+
         return [
             'total' => User::lawyers()->count(),
-            'verified' => User::lawyers()->whereHas('lawyerProfile', fn ($q) => $q->where('verification_status', VerificationStatus::Verified))->count(),
-            'pending' => User::lawyers()->whereHas('lawyerProfile', fn ($q) => $q->where('verification_status', VerificationStatus::Pending))->count(),
+            'verified' => $notSuspended()->whereHas('lawyerProfile', fn ($q) => $q->where('verification_status', VerificationStatus::Verified))->count(),
+            'pending' => $notSuspended()->whereHas('lawyerProfile', fn ($q) => $q->where('verification_status', VerificationStatus::Pending))->count(),
             'suspended' => User::lawyers()->where('status', UserStatus::Suspended)->count(),
         ];
     }
