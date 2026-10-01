@@ -8,6 +8,7 @@ use App\Enums\VerificationStatus;
 use App\Models\LawyerProfile;
 use App\Models\User;
 use App\Models\UserOtp;
+use App\Services\Admin\AdminAlertDispatcher;
 use App\Support\Identifier;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\UploadedFile;
@@ -18,8 +19,10 @@ use Throwable;
 
 class RegistrationService
 {
-    public function __construct(private readonly UserOtpService $otps)
-    {
+    public function __construct(
+        private readonly UserOtpService $otps,
+        private readonly AdminAlertDispatcher $adminAlerts,
+    ) {
     }
 
     /**
@@ -98,7 +101,19 @@ class RegistrationService
             throw $e;
         }
 
+        $this->notifyAdmins($user);
+
         return new RegistrationResult($user, $this->sendVerificationOtp($user));
+    }
+
+    /** A failed alert must not lose the account; it's a bell-icon nicety, not critical. */
+    private function notifyAdmins(User $user): void
+    {
+        try {
+            $this->adminAlerts->newAccountRegistered($user);
+        } catch (Throwable $e) {
+            report($e);
+        }
     }
 
     /**

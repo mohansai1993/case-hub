@@ -17,7 +17,7 @@
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
       <input type="text" id="role-search" placeholder="Filter roles..." />
     </label>
-    <span class="section-label" id="roles-count"></span>
+    <span class="section-label" id="roles-count">Showing {{ $roles->count() }} Defined Role{{ $roles->count() === 1 ? '' : 's' }}</span>
   </div>
 
   <div class="table-wrap">
@@ -32,60 +32,67 @@
           <th class="col-actions">Actions</th>
         </tr>
       </thead>
-      <tbody id="roles-body"></tbody>
+      <tbody id="roles-body">
+        @foreach ($roles as $role)
+          <tr data-filter="{{ mb_strtolower($role->name . ' ' . $role->tag . ' ' . $role->description) }}">
+            <td>
+              <div class="person">
+                <span class="role-icon"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4Z"/><path d="M9 12l2 2 4-4"/></svg></span>
+                <div><strong>{{ $role->name }}</strong><small class="role-tag-text">{{ $role->tag }}</small></div>
+              </div>
+            </td>
+            <td class="cell-desc">{{ $role->description ?: '—' }}</td>
+            <td>
+              <span class="users-pill">
+                <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-4-6.3"/></svg>
+                {{ $role->admins_count }} User{{ $role->admins_count === 1 ? '' : 's' }}
+              </span>
+            </td>
+            <td><span class="status {{ $role->is_active ? 'status-active' : 'status-suspended' }}">{{ $role->is_active ? 'Active' : 'Disabled' }}</span></td>
+            <td>{{ $role->created_at->format('d M Y') }}</td>
+            <td class="col-actions">
+              <a href="{{ route('admin.role-details', $role) }}" class="text-link">View</a>
+              / <a href="{{ route('admin.roles.edit', $role) }}" class="text-link">Edit</a>
+            </td>
+          </tr>
+        @endforeach
+      </tbody>
     </table>
     <p class="empty-msg" id="empty-msg" hidden>No roles match your search.</p>
   </div>
 
   <div class="table-footer">
-    <span id="roles-footer"></span>
+    <span id="roles-footer">{{ $roles->count() }} total roles configured across organizational entities</span>
     <span class="access-active"><span class="dot dot-blue"></span> Access Control Active</span>
   </div>
 </section>
 @endsection
 
 @push('scripts')
-<script src="{{ asset('assets/admin/roles-data.js') }}"></script>
 <script>
-// Roles list
-const roles = loadRoles();
-const staff = loadStaff();
-const tbody = document.getElementById("roles-body");
-const searchInput = document.getElementById("role-search");
+(function () {
+  "use strict";
 
-function renderRoles() {
-  const query = searchInput.value.trim().toLowerCase();
-  const list = roles.filter((r) =>
-    !query || [r.name, r.tag, r.desc].some((v) => (v || "").toLowerCase().includes(query))
-  );
+  var searchInput = document.getElementById("role-search");
+  var rows = [...document.querySelectorAll("#roles-body tr[data-filter]")];
+  var emptyMsg = document.getElementById("empty-msg");
+  var countLabel = document.getElementById("roles-count");
 
-  tbody.innerHTML = list.map((r) => {
-    const url = `{{ route('admin.role-details') }}?id=${encodeURIComponent(r.id)}`;
-    return `
-      <tr>
-        <td>
-          <div class="person">
-            <span class="role-icon">${roleIcon(r, roles)}</span>
-            <div><strong>${escapeHtml(r.name)}</strong><small class="role-tag-text">${escapeHtml(r.tag)}</small></div>
-          </div>
-        </td>
-        <td class="cell-desc">${escapeHtml(r.desc || "—")}</td>
-        <td><span class="users-pill"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-4-6.3"/></svg>${roleUsers(r.id, staff).length} User${roleUsers(r.id, staff).length === 1 ? "" : "s"}</span></td>
-        <td><span class="status ${r.status === "Active" ? "status-active" : "status-suspended"}">${escapeHtml(r.status)}</span></td>
-        <td>${escapeHtml(r.created)}</td>
-        <td class="col-actions">
-          <a href="${url}" class="text-link">View</a> / <a href="{{ route('admin.create-role') }}?edit=${encodeURIComponent(r.id)}" class="text-link">Edit</a>
-        </td>
-      </tr>`;
-  }).join("");
+  function renderRoles() {
+    var query = searchInput.value.trim().toLowerCase();
+    var visible = 0;
 
-  document.getElementById("empty-msg").hidden = list.length > 0;
-  document.getElementById("roles-count").textContent = `Showing ${list.length} Defined Role${list.length === 1 ? "" : "s"}`;
-}
+    rows.forEach(function (row) {
+      var match = !query || row.dataset.filter.includes(query);
+      row.hidden = !match;
+      if (match) visible++;
+    });
 
-document.getElementById("roles-footer").textContent =
-  `${roles.length} total roles configured across organizational entities`;
-searchInput.addEventListener("input", renderRoles);
-renderRoles();
+    emptyMsg.hidden = visible > 0;
+    countLabel.textContent = "Showing " + visible + " Defined Role" + (visible === 1 ? "" : "s");
+  }
+
+  searchInput.addEventListener("input", renderRoles);
+})();
 </script>
 @endpush

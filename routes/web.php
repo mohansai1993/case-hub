@@ -1,11 +1,16 @@
 <?php
 
 use App\Http\Controllers\Admin\AccountActionController;
+use App\Http\Controllers\Admin\AlertController;
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\HomeController;
 use App\Http\Controllers\Admin\LawyerController;
 use App\Http\Controllers\Admin\NotificationController;
+use App\Http\Controllers\Admin\PlanController;
 use App\Http\Controllers\Admin\PracticeAreaController;
+use App\Http\Controllers\Admin\RoleController;
+use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\StaffController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use Illuminate\Support\Facades\Route;
@@ -65,6 +70,13 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
         Route::get('/', HomeController::class)->name('home');
         Route::view('/no-access', 'admin.no-access')->name('no-access');
 
+        // Topbar bell icon: every signed-in admin has their own feed, no permission gate.
+        Route::prefix('alerts')->name('alerts.')->group(function () {
+            Route::get('/', [AlertController::class, 'index'])->name('index');
+            Route::post('/read-all', [AlertController::class, 'markAllRead'])->name('read-all');
+            Route::post('/{id}/read', [AlertController::class, 'markRead'])->name('read');
+        });
+
         Route::view('/dashboard', 'admin.dashboard')
             ->middleware('permission:dashboard.view')->name('dashboard');
 
@@ -101,11 +113,18 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
         });
 
         Route::middleware('permission:subscriptions.view')->group(function () {
-            Route::view('/subscriptions', 'admin.subscriptions')->name('subscriptions');
+            Route::get('/subscriptions', [PlanController::class, 'index'])->name('subscriptions');
             Route::view('/subscription-details', 'admin.subscription-details')->name('subscription-details');
         });
-        Route::view('/create-plan', 'admin.create-plan')
-            ->middleware('permission:subscriptions.manage')->name('create-plan');
+        Route::middleware('permission:subscriptions.manage')->group(function () {
+            Route::get('/plans/create', [PlanController::class, 'create'])->name('create-plan');
+            Route::post('/plans', [PlanController::class, 'store'])->name('plans.store');
+            Route::get('/plans/{plan}/edit', [PlanController::class, 'edit'])->name('plans.edit');
+            Route::put('/plans/{plan}', [PlanController::class, 'update'])->name('plans.update');
+            Route::post('/plans/{plan}/toggle', [PlanController::class, 'toggle'])->name('plans.toggle');
+            Route::post('/plans/bulk-deactivate', [PlanController::class, 'bulkDeactivate'])->name('plans.bulk-deactivate');
+            Route::delete('/plans/{plan}', [PlanController::class, 'destroy'])->name('plans.destroy');
+        });
 
         Route::middleware('permission:notifications.view')->group(function () {
             Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications');
@@ -116,16 +135,30 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
             Route::post('/notifications/send', [NotificationController::class, 'send'])->name('notifications.send');
         });
 
-        Route::view('/settings', 'admin.settings')
-            ->middleware('permission:settings.view')->name('settings');
+        Route::middleware('permission:settings.view')->group(function () {
+            Route::get('/settings', [SettingsController::class, 'index'])->name('settings');
+            Route::put('/settings/password', [SettingsController::class, 'updatePassword'])->name('settings.password');
+            Route::delete('/settings/account', [SettingsController::class, 'destroy'])->name('settings.destroy');
+        });
 
         // Not delegable: only the Super Admin manages roles and staff.
         Route::middleware('super')->group(function () {
-            Route::view('/roles', 'admin.roles')->name('roles');
-            Route::view('/create-role', 'admin.create-role')->name('create-role');
-            Route::view('/role-details', 'admin.role-details')->name('role-details');
-            Route::view('/staff', 'admin.staff')->name('staff');
-            Route::view('/create-staff', 'admin.create-staff')->name('create-staff');
-            Route::view('/staff-details', 'admin.staff-details')->name('staff-details');
+            Route::get('/roles', [RoleController::class, 'index'])->name('roles');
+            Route::get('/roles/create', [RoleController::class, 'create'])->name('create-role');
+            Route::post('/roles', [RoleController::class, 'store'])->name('roles.store');
+            Route::get('/roles/{role}', [RoleController::class, 'show'])->name('role-details');
+            Route::get('/roles/{role}/edit', [RoleController::class, 'edit'])->name('roles.edit');
+            Route::put('/roles/{role}', [RoleController::class, 'update'])->name('roles.update');
+            Route::post('/roles/{role}/toggle', [RoleController::class, 'toggle'])->name('roles.toggle');
+
+            Route::get('/staff', [StaffController::class, 'index'])->name('staff');
+            Route::get('/staff/create', [StaffController::class, 'create'])->name('create-staff');
+            Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
+            Route::get('/staff/{admin}', [StaffController::class, 'show'])->whereUuid('admin')->name('staff-details');
+            Route::get('/staff/{admin}/edit', [StaffController::class, 'edit'])->whereUuid('admin')->name('staff.edit');
+            Route::put('/staff/{admin}', [StaffController::class, 'update'])->whereUuid('admin')->name('staff.update');
+            Route::post('/staff/{admin}/toggle', [StaffController::class, 'toggle'])->whereUuid('admin')->name('staff.toggle');
+            Route::post('/staff/{admin}/role', [StaffController::class, 'updateRole'])->whereUuid('admin')->name('staff.update-role');
+            Route::post('/staff/{admin}/reset-password', [StaffController::class, 'resetPassword'])->whereUuid('admin')->name('staff.reset-password');
         });
     });

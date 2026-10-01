@@ -20,6 +20,7 @@ class AuthAuditLogger
     public const LOGIN_BLOCKED = 'login.blocked';
     public const LOGIN_LOCKOUT = 'login.lockout';
     public const LOGOUT = 'logout';
+    public const PASSWORD_CHANGED = 'password.changed';
     public const OTP_SENT = 'password.otp_sent';
     public const OTP_FAILED = 'password.otp_failed';
     public const OTP_VERIFIED = 'password.otp_verified';

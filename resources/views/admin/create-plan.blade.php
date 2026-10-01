@@ -1,6 +1,6 @@
 @extends('layouts.admin')
 
-@section('title', 'CaseHub Create Plan')
+@section('title', $plan ? 'CaseHub Edit Plan' : 'CaseHub Create Plan')
 
 @section('content')
 <div class="page-head">
@@ -8,7 +8,7 @@
     <a href="{{ route('admin.subscriptions') }}" class="back-btn" aria-label="Back to subscriptions">
       <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
-    <span id="form-title">Create Subscription Plan</span>
+    <span id="form-title">{{ $plan ? 'Edit Subscription Plan' : 'Create Subscription Plan' }}</span>
   </h1>
   <p>Configure a new storage capacity tier and pricing model for client document vaults.</p>
 </div>
@@ -20,7 +20,7 @@
         <label for="plan-name">Plan Name</label>
         <span class="section-label">Required</span>
       </div>
-      <input class="input" id="plan-name" type="text" placeholder="Enter plan name (e.g. Enterprise Tier, Basic, Standard)" />
+      <input class="input" id="plan-name" type="text" maxlength="255" value="{{ $plan->name ?? '' }}" placeholder="Enter plan name (e.g. Enterprise Tier, Basic, Standard)" />
     </div>
 
     <div class="form-row">
@@ -29,10 +29,10 @@
         <span class="section-label">Capacity Allocation</span>
       </div>
       <div class="input-group">
-        <input class="input" id="plan-storage" type="number" min="1" placeholder="e.g. 500 or 5" />
+        <input class="input" id="plan-storage" type="number" min="1" value="{{ $plan->storage_amount ?? '' }}" placeholder="e.g. 500 or 5" />
         <div class="unit-toggle" role="group" aria-label="Storage unit">
-          <button type="button" data-unit="MB">MB</button>
-          <button type="button" data-unit="GB" class="is-active">GB</button>
+          <button type="button" data-unit="MB" class="{{ ($plan->storage_unit->value ?? 'GB') === 'MB' ? 'is-active' : '' }}">MB</button>
+          <button type="button" data-unit="GB" class="{{ ($plan->storage_unit->value ?? 'GB') === 'GB' ? 'is-active' : '' }}">GB</button>
         </div>
       </div>
     </div>
@@ -44,7 +44,7 @@
       </div>
       <div class="input-prefix">
         <span>₹</span>
-        <input class="input" id="plan-price" type="number" min="0" placeholder="Enter price amount (e.g. 299)" />
+        <input class="input" id="plan-price" type="number" min="0" value="{{ $plan->price ?? '' }}" placeholder="Enter price amount (e.g. 299)" />
       </div>
     </div>
 
@@ -69,11 +69,11 @@
         <label for="plan-desc">Short Description</label>
         <span class="section-label">Client Facing</span>
       </div>
-      <textarea class="input" id="plan-desc" rows="4" placeholder="Enter short description (e.g. Essential document vault for individual clients handling standard matter proceedings)"></textarea>
+      <textarea class="input" id="plan-desc" rows="4" maxlength="1000" placeholder="Enter short description (e.g. Essential document vault for individual clients handling standard matter proceedings)">{{ $plan->description ?? '' }}</textarea>
     </div>
 
     <label class="popular-check">
-      <input type="checkbox" id="plan-popular" />
+      <input type="checkbox" id="plan-popular" @checked($plan->is_popular ?? false) />
       <span>Mark as Popular Tier</span>
     </label>
 
@@ -81,7 +81,7 @@
 
     <div class="form-actions">
       <a href="{{ route('admin.subscriptions') }}" class="btn-inline btn-light">Cancel</a>
-      <button type="submit" class="btn-inline btn-block-primary" id="submit-btn">Create Plan</button>
+      <button type="submit" class="btn-inline btn-block-primary" id="submit-btn">{{ $plan ? 'Save Changes' : 'Create Plan' }}</button>
     </div>
   </form>
 </section>
@@ -89,84 +89,73 @@
 
 @push('scripts')
 <script>
-// Plans are shared with {{ route('admin.subscriptions') }} through localStorage
-const PLANS_KEY = "casehub-plans";
-const DEFAULT_PLANS = [
-  { id: "basic", name: "Basic", price: 99, storage: "500 MB", popular: false, desc: "Essential document vault for individual clients handling standard matter proceedings." },
-  { id: "standard", name: "Standard", price: 199, storage: "1 GB", popular: true, desc: "Expanded capacity for corporate files, evidentiary exhibits, and continuous records." },
-  { id: "premium", name: "Premium", price: 399, storage: "5 GB", popular: false, desc: "High-capacity tier for complex litigation dockets with multimedia and large forensic bundles." }
-];
+(function () {
+  "use strict";
 
-function loadPlans() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(PLANS_KEY));
-    if (Array.isArray(saved)) return saved;
-  } catch (e) {}
-  return DEFAULT_PLANS;
-}
+  var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+  var unitButtons = document.querySelectorAll(".unit-toggle button");
+  var unit = "{{ $plan->storage_unit->value ?? 'GB' }}";
 
-const form = document.getElementById("plan-form");
-const nameInput = document.getElementById("plan-name");
-const storageInput = document.getElementById("plan-storage");
-const priceInput = document.getElementById("plan-price");
-const descInput = document.getElementById("plan-desc");
-const popularInput = document.getElementById("plan-popular");
-const formError = document.getElementById("form-error");
-const unitButtons = document.querySelectorAll(".unit-toggle button");
-let unit = "GB";
+  function setUnit(value) {
+    unit = value;
+    unitButtons.forEach(function (b) { b.classList.toggle("is-active", b.dataset.unit === value); });
+  }
 
-function setUnit(value) {
-  unit = value;
-  unitButtons.forEach((b) => b.classList.toggle("is-active", b.dataset.unit === value));
-}
+  unitButtons.forEach(function (b) { b.addEventListener("click", function () { setUnit(b.dataset.unit); }); });
 
-unitButtons.forEach((b) => b.addEventListener("click", () => setUnit(b.dataset.unit)));
+  var form = document.getElementById("plan-form");
+  var nameInput = document.getElementById("plan-name");
+  var storageInput = document.getElementById("plan-storage");
+  var priceInput = document.getElementById("plan-price");
+  var descInput = document.getElementById("plan-desc");
+  var popularInput = document.getElementById("plan-popular");
+  var formError = document.getElementById("form-error");
+  var submitBtn = document.getElementById("submit-btn");
 
-// Edit mode: {{ route('admin.create-plan') }}?edit=<plan id>
-let plans = loadPlans();
-const editId = new URLSearchParams(location.search).get("edit");
-const editing = plans.find((p) => p.id === editId);
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
 
-if (editing) {
-  document.getElementById("form-title").textContent = "Edit Subscription Plan";
-  document.getElementById("submit-btn").textContent = "Save Changes";
-  nameInput.value = editing.name;
-  const [amount, storageUnit] = editing.storage.split(" ");
-  storageInput.value = amount;
-  setUnit(storageUnit);
-  priceInput.value = editing.price;
-  descInput.value = editing.desc;
-  popularInput.checked = editing.popular;
-}
+    var name = nameInput.value.trim();
+    var storage = Number(storageInput.value);
+    var price = Number(priceInput.value);
 
-form.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const name = nameInput.value.trim();
-  const storage = Number(storageInput.value);
-  const price = Number(priceInput.value);
+    if (!name) { formError.textContent = "Please enter a plan name."; return; }
+    if (!storage || storage <= 0) { formError.textContent = "Please enter a valid storage amount."; return; }
+    if (priceInput.value === "" || price < 0) { formError.textContent = "Please enter a valid price."; return; }
+    formError.textContent = "";
+    submitBtn.disabled = true;
 
-  if (!name) return (formError.textContent = "Please enter a plan name.");
-  if (!storage || storage <= 0) return (formError.textContent = "Please enter a valid storage amount.");
-  if (priceInput.value === "" || price < 0) return (formError.textContent = "Please enter a valid price.");
-  formError.textContent = "";
-
-  const plan = {
-    id: editing ? editing.id : `plan-${Date.now()}`,
-    name,
-    price,
-    storage: `${storage} ${unit}`,
-    popular: popularInput.checked,
-    active: editing ? editing.active !== false : true,
-    desc: descInput.value.trim()
-  };
-
-  // Only one plan can be the popular tier
-  if (plan.popular) plans = plans.map((p) => ({ ...p, popular: false }));
-  plans = editing ? plans.map((p) => (p.id === plan.id ? plan : p)) : [...plans, plan];
-
-  // TODO: save the plan via backend API
-  try { localStorage.setItem(PLANS_KEY, JSON.stringify(plans)); } catch (err) {}
-  location.href = "{{ route('admin.subscriptions') }}";
-});
+    fetch("{{ $plan ? route('admin.plans.update', $plan) : route('admin.plans.store') }}", {
+      method: "{{ $plan ? 'PUT' : 'POST' }}",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-TOKEN": CSRF,
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: JSON.stringify({
+        name: name,
+        storage_amount: storage,
+        storage_unit: unit,
+        price: price,
+        description: descInput.value.trim(),
+        is_popular: popularInput.checked
+      })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) { return { ok: res.ok, body: body }; });
+    }).then(function (result) {
+      if (!result.ok) {
+        var errors = result.body.errors;
+        formError.textContent = errors ? Object.values(errors)[0][0] : (result.body.message || "Could not save this plan.");
+        submitBtn.disabled = false;
+        return;
+      }
+      window.location.href = "{{ route('admin.subscriptions') }}";
+    }).catch(function () {
+      formError.textContent = "Could not reach the server. Please try again.";
+      submitBtn.disabled = false;
+    });
+  });
+})();
 </script>
 @endpush

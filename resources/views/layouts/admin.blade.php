@@ -43,6 +43,7 @@
     backdrop.addEventListener("click", () => toggleSidebar(false));
   </script>
   <script src="{{ asset('assets/admin/toast.js') }}"></script>
+  <script src="{{ asset('assets/admin/alerts.js') }}"></script>
   @if (session('toast'))
     <script>showToast(@json(session('toast.message')), @json(session('toast.type', 'info')));</script>
   @endif

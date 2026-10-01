@@ -52,9 +52,17 @@ class AuthorizationTest extends TestCase
         $everything = array_keys(\App\Support\Permissions::all());
         $this->actingAs(Admin::factory()->withPermissions($everything)->create(), 'admin');
 
-        foreach (['roles', 'create-role', 'role-details', 'staff', 'create-staff', 'staff-details'] as $page) {
+        $role = \App\Models\Role::factory()->create();
+        $member = Admin::factory()->create();
+
+        foreach (['roles', 'create-role', 'staff', 'create-staff'] as $page) {
             $this->get(route("admin.$page"))->assertForbidden();
         }
+
+        $this->get(route('admin.role-details', $role))->assertForbidden();
+        $this->get(route('admin.roles.edit', $role))->assertForbidden();
+        $this->get(route('admin.staff-details', $member))->assertForbidden();
+        $this->get(route('admin.staff.edit', $member))->assertForbidden();
     }
 
     public function test_sidebar_only_lists_permitted_sections(): void

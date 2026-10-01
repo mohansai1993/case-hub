@@ -21,8 +21,41 @@
     <a href="{{ route('admin.create-plan') }}" class="btn-primary">+ Create Plan</a>
   </div>
 
-  <div class="plan-grid" id="plan-grid"></div>
-  <p class="empty-msg" id="plans-empty" hidden>No plans yet. Create your first plan.</p>
+  <div class="plan-grid" id="plan-grid">
+    @foreach ($plans as $plan)
+      <article class="plan-card{{ $plan->is_popular ? ' is-popular' : '' }}{{ $plan->is_active ? '' : ' is-inactive' }}">
+        @if ($plan->is_popular)
+          <span class="popular-tag">Popular Tier</span>
+        @endif
+        <div class="plan-card-top">
+          <span class="plan-name">
+            <span class="dot dot-blue"></span>{{ $plan->name }}
+            @unless ($plan->is_active)
+              <span class="status status-inactive">Inactive</span>
+            @endunless
+          </span>
+          <span class="pill-soft">One-time payment</span>
+        </div>
+        <div class="plan-price">₹{{ $plan->price }} <small>/ flat fee</small></div>
+        <span class="storage-chip">
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
+          {{ $plan->storageLabel() }} Storage
+        </span>
+        <p class="plan-desc">{{ $plan->description }}</p>
+        <div class="plan-actions">
+          <a href="{{ route('admin.plans.edit', $plan) }}" class="btn-sm">
+            <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Edit
+          </a>
+          <button type="button" class="btn-sm btn-sm-danger" data-delete="{{ $plan->id }}" data-name="{{ $plan->name }}">
+            <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
+            Delete
+          </button>
+        </div>
+      </article>
+    @endforeach
+  </div>
+  <p class="empty-msg" id="plans-empty" @unless ($plans->isEmpty()) hidden @endunless>No plans yet. Create your first plan.</p>
 </section>
 
 <!-- SUBSCRIPTIONS LIST -->
@@ -81,6 +114,7 @@
 @endsection
 
 @push('scripts')
+@include('admin.partials.moderation-scripts')
 <script>
 function escapeHtml(text) {
   const div = document.createElement("div");
@@ -88,73 +122,45 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Subscription plans — saved in this browser (localStorage) until a backend exists
-const PLANS_KEY = "casehub-plans";
-const DEFAULT_PLANS = [
-  { id: "basic", name: "Basic", price: 99, storage: "500 MB", popular: false, desc: "Essential document vault for individual clients handling standard matter proceedings." },
-  { id: "standard", name: "Standard", price: 199, storage: "1 GB", popular: true, desc: "Expanded capacity for corporate files, evidentiary exhibits, and continuous records." },
-  { id: "premium", name: "Premium", price: 399, storage: "5 GB", popular: false, desc: "High-capacity tier for complex litigation dockets with multimedia and large forensic bundles." }
-];
+// Subscription plans — real data, rendered server-side above. Only delete needs JS.
+(function () {
+  "use strict";
 
-function loadPlans() {
-  try {
-    const saved = JSON.parse(localStorage.getItem(PLANS_KEY));
-    if (Array.isArray(saved)) return saved;
-  } catch (e) {}
-  return DEFAULT_PLANS;
-}
+  var CSRF = document.querySelector('meta[name="csrf-token"]').content;
 
-function savePlans(plans) {
-  try { localStorage.setItem(PLANS_KEY, JSON.stringify(plans)); } catch (e) {}
-}
+  document.getElementById("plan-grid").addEventListener("click", function (e) {
+    var btn = e.target.closest("[data-delete]");
+    if (!btn) return;
 
-let plans = loadPlans();
-const planGrid = document.getElementById("plan-grid");
-const plansEmpty = document.getElementById("plans-empty");
+    Swal.fire({
+      title: 'Delete the "' + btn.dataset.name + '" plan?',
+      text: "This cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#e0413a",
+      cancelButtonColor: "#8b8b94",
+      reverseButtons: true,
+      focusCancel: true,
+    }).then(function (result) {
+      if (!result.isConfirmed) return;
 
-function renderPlans() {
-  planGrid.innerHTML = plans.map((p) => `
-    <article class="plan-card${p.popular ? " is-popular" : ""}${p.active === false ? " is-inactive" : ""}">
-      ${p.popular ? '<span class="popular-tag">Popular Tier</span>' : ""}
-      <div class="plan-card-top">
-        <span class="plan-name">
-          <span class="dot dot-blue"></span>${escapeHtml(p.name)}
-          ${p.active === false ? '<span class="status status-inactive">Inactive</span>' : ""}
-        </span>
-        <span class="pill-soft">One-time payment</span>
-      </div>
-      <div class="plan-price">₹${escapeHtml(p.price)} <small>/ flat fee</small></div>
-      <span class="storage-chip">
-        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>
-        ${escapeHtml(p.storage)} Storage
-      </span>
-      <p class="plan-desc">${escapeHtml(p.desc)}</p>
-      <div class="plan-actions">
-        <a href="{{ route('admin.create-plan') }}?edit=${encodeURIComponent(p.id)}" class="btn-sm">
-          <svg viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
-          Edit
-        </a>
-        <button class="btn-sm btn-sm-danger" data-delete="${escapeHtml(p.id)}">
-          <svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/></svg>
-          Delete
-        </button>
-      </div>
-    </article>`).join("");
-  plansEmpty.hidden = plans.length > 0;
-}
-
-planGrid.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-delete]");
-  if (!btn) return;
-  const plan = plans.find((p) => p.id === btn.dataset.delete);
-  if (plan && confirm(`Delete the "${plan.name}" plan?`)) {
-    plans = plans.filter((p) => p.id !== plan.id);
-    savePlans(plans);
-    renderPlans();
-  }
-});
-
-renderPlans();
+      fetch("{{ url('admin/plans') }}/" + btn.dataset.delete, {
+        method: "DELETE",
+        headers: { "Accept": "application/json", "X-CSRF-TOKEN": CSRF, "X-Requested-With": "XMLHttpRequest" }
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (body) { return { ok: res.ok, body: body }; });
+      }).then(function (result) {
+        if (!result.ok) {
+          Swal.fire({ icon: "error", title: "Could not delete", text: result.body.message || "Please try again." });
+          return;
+        }
+        window.location.reload();
+      });
+    });
+  });
+})();
 
 // Subscriptions list (static sample data — replace with API data later)
 const TOTAL_SUBS = "1,180";

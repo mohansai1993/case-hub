@@ -1,16 +1,16 @@
 @extends('layouts.admin')
 
-@section('title', 'CaseHub Create Role')
+@section('title', $role ? 'CaseHub Edit Role' : 'CaseHub Create Role')
 
 @section('content')
 <div class="page-head">
   <h1 class="title-back">
-    <a href="{{ route('admin.roles') }}" class="back-btn" aria-label="Back to roles">
+    <a href="{{ $role ? route('admin.role-details', $role) : route('admin.roles') }}" class="back-btn" aria-label="Back">
       <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
     </a>
-    <span id="form-title">Create Role</span>
+    <span id="form-title">{{ $role ? 'Edit Role' : 'Create Role' }}</span>
   </h1>
-  <p>Create a role and assign specific permissions.</p>
+  <p>{{ $role ? 'Update role details and permissions.' : 'Create a role and assign specific permissions.' }}</p>
 </div>
 
 <form id="role-form" novalidate>
@@ -25,12 +25,12 @@
     <div class="two-col">
       <div class="form-row">
         <div class="form-label-row"><label for="role-name">Role Name <span class="text-red">*</span></label></div>
-        <input class="input" id="role-name" type="text" placeholder="Enter role name (e.g. Associate Case Manager)" />
+        <input class="input" id="role-name" type="text" maxlength="255" value="{{ $role->name ?? '' }}" placeholder="Enter role name (e.g. Associate Case Manager)" />
         <small class="hint">Distinct internal name identifying the functional scope.</small>
       </div>
       <div class="form-row">
         <div class="form-label-row"><label for="role-desc">Description <span class="text-muted">(Optional)</span></label></div>
-        <textarea class="input" id="role-desc" rows="2" placeholder="Enter a short description (e.g. Detailed access permissions for litigation associate staff)"></textarea>
+        <textarea class="input" id="role-desc" rows="2" maxlength="500" placeholder="Enter a short description (e.g. Detailed access permissions for litigation associate staff)">{{ $role->description ?? '' }}</textarea>
         <small class="hint">Summary of duties and operational clearance.</small>
       </div>
     </div>
@@ -52,133 +52,129 @@
       </div>
     </div>
 
-    <div class="modules" id="modules"></div>
+    @php $granted = $role?->permissionKeys() ?? []; @endphp
+    <div class="modules" id="modules">
+      @foreach (config('permissions.modules') as $module)
+        <div class="module">
+          <div class="module-head">
+            <label class="check">
+              <input type="checkbox" class="module-check" />
+              <strong>{{ $module['label'] }}</strong>
+            </label>
+            <span class="module-count"></span>
+          </div>
+          <div class="module-perms">
+            @foreach ($module['permissions'] as $key => $label)
+              <label class="check">
+                <input type="checkbox" class="perm-check" value="{{ $key }}" @checked(in_array($key, $granted, true)) />
+                <span>{{ $label }}</span>
+              </label>
+            @endforeach
+          </div>
+        </div>
+      @endforeach
+    </div>
   </section>
 
   <p class="error-msg form-error-center" id="form-error"></p>
 
   <section class="card form-footer">
-    <a href="{{ route('admin.roles') }}" class="btn-inline btn-light">Cancel</a>
+    <a href="{{ $role ? route('admin.role-details', $role) : route('admin.roles') }}" class="btn-inline btn-light">Cancel</a>
     <button type="submit" class="btn-inline btn-block-primary" id="submit-btn">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8 12h8"/></svg>
-      <span>Create Role</span>
+      <span>{{ $role ? 'Save Changes' : 'Create Role' }}</span>
     </button>
   </section>
 </form>
 @endsection
 
 @push('scripts')
-<script src="{{ asset('assets/admin/roles-data.js') }}"></script>
 <script>
-// Permission modules
-const modulesEl = document.getElementById("modules");
+(function () {
+  "use strict";
 
-modulesEl.innerHTML = PERMISSION_MODULES.map((m, i) => `
-  <div class="module" data-module="${m.id}">
-    <div class="module-head">
-      <label class="check">
-        <input type="checkbox" class="module-check" />
-        <strong>${escapeHtml(m.name)}</strong>
-      </label>
-      <span class="module-tag">Module ${String(i + 1).padStart(2, "0")}</span>
-      <span class="module-count"></span>
-    </div>
-    <div class="module-perms">
-      ${m.perms.map((p) => `
-        <label class="check">
-          <input type="checkbox" class="perm-check" value="${escapeHtml(p)}" />
-          <span>${escapeHtml(p)}</span>
-        </label>`).join("")}
-    </div>
-  </div>`).join("");
+  var modulesEl = document.getElementById("modules");
 
-function refreshModules() {
-  modulesEl.querySelectorAll(".module").forEach((mod) => {
-    const perms = [...mod.querySelectorAll(".perm-check")];
-    const checked = perms.filter((p) => p.checked).length;
-    const head = mod.querySelector(".module-check");
-    head.checked = checked === perms.length;
-    head.indeterminate = checked > 0 && checked < perms.length;
-    mod.querySelector(".module-count").textContent = `${checked} of ${perms.length} selected`;
-    mod.classList.toggle("has-selection", checked > 0);
-  });
-}
-
-modulesEl.addEventListener("change", (e) => {
-  if (e.target.classList.contains("module-check")) {
-    e.target.closest(".module").querySelectorAll(".perm-check").forEach((p) => (p.checked = e.target.checked));
-  }
-  refreshModules();
-});
-
-function setAll(value) {
-  modulesEl.querySelectorAll(".perm-check").forEach((p) => (p.checked = value));
-  refreshModules();
-}
-
-document.getElementById("select-all").addEventListener("click", () => setAll(true));
-document.getElementById("deselect-all").addEventListener("click", () => setAll(false));
-
-// Edit mode: {{ route('admin.create-role') }}?edit=<role id>
-let roles = loadRoles();
-const editId = new URLSearchParams(location.search).get("edit");
-const editing = roles.find((r) => r.id === editId);
-const nameInput = document.getElementById("role-name");
-const descInput = document.getElementById("role-desc");
-
-if (editing) {
-  document.getElementById("form-title").textContent = "Edit Role";
-  document.querySelector("#submit-btn span").textContent = "Save Changes";
-  document.querySelector(".page-head p").textContent = "Update role details and permissions.";
-  nameInput.value = editing.name;
-  descInput.value = editing.desc || "";
-  modulesEl.querySelectorAll(".perm-check").forEach((p) => (p.checked = editing.perms.includes(p.value)));
-}
-
-refreshModules();
-
-// Save
-const formError = document.getElementById("form-error");
-
-document.getElementById("role-form").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const name = nameInput.value.trim();
-  const perms = [...modulesEl.querySelectorAll(".perm-check:checked")].map((p) => p.value);
-
-  if (!name) {
-    formError.textContent = "Please enter a role name.";
-    nameInput.focus();
-    return;
-  }
-  if (roles.some((r) => r.name.toLowerCase() === name.toLowerCase() && r !== editing)) {
-    formError.textContent = "A role with this name already exists.";
-    return;
-  }
-  if (!perms.length) {
-    formError.textContent = "Please select at least one permission.";
-    return;
-  }
-  formError.textContent = "";
-
-  let id;
-  if (editing) {
-    Object.assign(editing, { name, desc: descInput.value.trim(), perms });
-    id = editing.id;
-  } else {
-    id = `role-${Date.now()}`;
-    roles.push({
-      id,
-      name,
-      tag: "Custom Role",
-      desc: descInput.value.trim(),
-      status: "Active",
-      created: formatDate(new Date()),
-      perms
+  function refreshModules() {
+    modulesEl.querySelectorAll(".module").forEach(function (mod) {
+      var perms = [...mod.querySelectorAll(".perm-check")];
+      var checked = perms.filter(function (p) { return p.checked; }).length;
+      var head = mod.querySelector(".module-check");
+      head.checked = checked === perms.length;
+      head.indeterminate = checked > 0 && checked < perms.length;
+      mod.querySelector(".module-count").textContent = checked + " of " + perms.length + " selected";
+      mod.classList.toggle("has-selection", checked > 0);
     });
   }
 
-  saveRoles(roles);
-  location.href = `{{ route('admin.role-details') }}?id=${encodeURIComponent(id)}`;
-});
+  modulesEl.addEventListener("change", function (e) {
+    if (e.target.classList.contains("module-check")) {
+      e.target.closest(".module").querySelectorAll(".perm-check").forEach(function (p) { p.checked = e.target.checked; });
+    }
+    refreshModules();
+  });
+
+  document.getElementById("select-all").addEventListener("click", function () {
+    modulesEl.querySelectorAll(".perm-check").forEach(function (p) { p.checked = true; });
+    refreshModules();
+  });
+
+  document.getElementById("deselect-all").addEventListener("click", function () {
+    modulesEl.querySelectorAll(".perm-check").forEach(function (p) { p.checked = false; });
+    refreshModules();
+  });
+
+  refreshModules();
+
+  var CSRF = document.querySelector('meta[name="csrf-token"]').content;
+  var formError = document.getElementById("form-error");
+  var submitBtn = document.getElementById("submit-btn");
+
+  document.getElementById("role-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+
+    var name = document.getElementById("role-name").value.trim();
+    var permissions = [...modulesEl.querySelectorAll(".perm-check:checked")].map(function (p) { return p.value; });
+
+    if (!name) {
+      formError.textContent = "Please enter a role name.";
+      return;
+    }
+    if (!permissions.length) {
+      formError.textContent = "Please select at least one permission.";
+      return;
+    }
+    formError.textContent = "";
+    submitBtn.disabled = true;
+
+    fetch("{{ $role ? route('admin.roles.update', $role) : route('admin.roles.store') }}", {
+      method: "{{ $role ? 'PUT' : 'POST' }}",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-CSRF-TOKEN": CSRF,
+        "X-Requested-With": "XMLHttpRequest"
+      },
+      body: JSON.stringify({
+        name: name,
+        description: document.getElementById("role-desc").value.trim(),
+        permissions: permissions
+      })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (body) { return { ok: res.ok, body: body }; });
+    }).then(function (result) {
+      if (!result.ok) {
+        var errors = result.body.errors;
+        formError.textContent = errors ? Object.values(errors)[0][0] : (result.body.message || "Could not save this role.");
+        submitBtn.disabled = false;
+        return;
+      }
+      window.location.href = "{{ url('admin/roles') }}/" + result.body.data.id;
+    }).catch(function () {
+      formError.textContent = "Could not reach the server. Please try again.";
+      submitBtn.disabled = false;
+    });
+  });
+})();
 </script>
 @endpush

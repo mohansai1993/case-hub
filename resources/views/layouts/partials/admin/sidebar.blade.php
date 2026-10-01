@@ -42,13 +42,13 @@
         </a>
         @endif
         @if($admin->isSuperAdmin())
-        <a href="{{ route('admin.roles') }}" class="nav-item {{ request()->routeIs('admin.roles', 'admin.create-role', 'admin.role-details') ? 'is-active' : '' }}">
+        <a href="{{ route('admin.roles') }}" class="nav-item {{ request()->routeIs('admin.roles', 'admin.create-role', 'admin.role-details', 'admin.roles.edit') ? 'is-active' : '' }}">
           <svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4Z"/><path d="M9 12l2 2 4-4"/></svg>
           Roles &amp; Permissions
         </a>
         @endif
         @if($admin->isSuperAdmin())
-        <a href="{{ route('admin.staff') }}" class="nav-item {{ request()->routeIs('admin.staff', 'admin.create-staff', 'admin.staff-details') ? 'is-active' : '' }}">
+        <a href="{{ route('admin.staff') }}" class="nav-item {{ request()->routeIs('admin.staff', 'admin.create-staff', 'admin.staff-details', 'admin.staff.edit') ? 'is-active' : '' }}">
           <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M16 3.1a4 4 0 0 1 0 7.8M22 21a7 7 0 0 0-4-6.3"/></svg>
           Staff
         </a>

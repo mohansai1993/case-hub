@@ -30,6 +30,32 @@
       text: "They will be able to log in again.",
       icon: "question",
       confirm: "Yes, activate"
+    },
+    "disable-role": {
+      title: function (n) { return "Disable " + n + "?"; },
+      text: "Assigned users will lose these permissions until the role is enabled again.",
+      icon: "warning",
+      confirm: "Yes, disable",
+      danger: true
+    },
+    "enable-role": {
+      title: function (n) { return "Enable " + n + "?"; },
+      text: "Assigned users will regain all permissions of this role.",
+      icon: "question",
+      confirm: "Yes, enable"
+    },
+    "deactivate-staff": {
+      title: function (n) { return "Deactivate " + n + "?"; },
+      text: "They will be signed out and cannot sign in until you activate the account again.",
+      icon: "warning",
+      confirm: "Yes, deactivate",
+      danger: true
+    },
+    "activate-staff": {
+      title: function (n) { return "Activate " + n + "?"; },
+      text: "They will be able to sign in again.",
+      icon: "question",
+      confirm: "Yes, activate"
     }
   };
 

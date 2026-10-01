@@ -631,6 +631,98 @@ body.dashboard-page {
   background: var(--red);
 }
 
+.alerts {
+  position: relative;
+}
+
+.alerts-panel {
+  position: absolute;
+  top: calc(100% + 14px);
+  right: -8px;
+  z-index: 50;
+  width: 360px;
+  max-width: calc(100vw - 32px);
+  max-height: 440px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .18);
+  animation: fadeIn .15s ease;
+}
+
+.alerts-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.alerts-list {
+  overflow-y: auto;
+}
+
+.alerts-list .empty-msg {
+  padding: 28px 18px;
+}
+
+.alert-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  text-decoration: none;
+  color: inherit;
+}
+
+.alert-item:hover {
+  background: var(--light-bg);
+}
+
+.alert-item:last-child {
+  border-bottom: 0;
+}
+
+.alert-dot {
+  flex: none;
+  margin-top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.alert-item.is-unread .alert-dot {
+  background: var(--primary);
+}
+
+.alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.alert-body strong {
+  font-size: 14px;
+}
+
+.alert-body small {
+  color: var(--muted);
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alert-time {
+  color: var(--muted);
+  font-size: 12px;
+}
+
 .profile {
   display: flex;
   align-items: center;
