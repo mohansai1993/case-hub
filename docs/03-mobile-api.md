@@ -133,6 +133,10 @@ Lawyer ke liye extra `lawyer` object bhi aata hai (client mein nahi):
 | 12 | POST | `/auth/forgot-password/verify` | Nahi | Forgot password: OTP verify |
 | 13 | POST | `/auth/reset-password` | Nahi | Naya password |
 | 14 | GET | `/plans` | Bearer (sirf Client) | Storage plans list (Subscription screen) |
+| 15 | POST | `/profile/photo` | Bearer | Profile photo set/replace (Client aur Lawyer dono) |
+| 16 | GET | `/notifications` | Bearer | In-app notifications list (Client aur Lawyer dono) |
+| 17 | POST | `/notifications/{id}/read` | Bearer | Ek notification read mark karo |
+| 18 | POST | `/notifications/read-all` | Bearer | Saari notifications read mark karo |
 
 ---
 
@@ -671,6 +675,85 @@ Response `403` (lawyer ka token):
 ```
 
 > **Abhi sirf list hai** - kisi plan ko "subscribe/purchase" karne ka koi endpoint nahi hai, kyunki client-to-plan assignment (storage usage tracking, billing, waghera) ka poora feature abhi codebase mein bana hi nahi hai. Yeh list GET admin ke `/admin/subscriptions` page par dikhne wale plans ke saath sync rehta hai (same `plans` table).
+
+---
+
+### 4.15 `POST /profile/photo`
+
+Profile photo set ya replace karo - **Client aur Lawyer dono** use kar sakte hain (lawyer ka registration ke time ka photo bhi isi se baad mein badla ja sakta hai).
+
+Header: `Authorization: Bearer <token>`, body `multipart/form-data`.
+
+| Field | Detail |
+|---|---|
+| `photo` | Required. JPG ya PNG, max 5MB (lawyer-registration wale photo jaisa hi rule) |
+
+Response `200`:
+```json
+{
+  "message": "Profile photo updated.",
+  "data": { "image_url": "http://127.0.0.1:8000/storage/profile-photos/abc123.jpg" }
+}
+```
+
+Purana photo (agar tha) replace hote hi disk se delete ho jaata hai.
+
+Response `422` (galat file type / size / missing):
+```json
+{
+  "message": "The photo field is required.",
+  "errors": { "photo": ["The photo field is required."] }
+}
+```
+
+---
+
+### 4.16 `GET /notifications`
+
+In-app notifications - **Client aur Lawyer dono** apni apni dekh sakte hain (har account ki apni list hai, kisi aur ki nahi dikhti). Abhi sirf ek event isme likhta hai: naya case-chat message (dekho `docs/04-realtime-chat.md`) - app background/disconnect ho toh yeh list hi batata hai ki kuch naya aaya.
+
+Header: `Authorization: Bearer <token>`
+
+Response `200`:
+```json
+{
+  "data": [
+    {
+      "id": "9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d",
+      "title": "Adv. Rao",
+      "body": "Please share the documents",
+      "data": { "case_id": 14, "message_id": 102 },
+      "read": false,
+      "created_at": "2026-10-01T09:37:33+00:00"
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "last_page": 1,
+    "unread_count": 1
+  }
+}
+```
+
+20 per page (`?page=2` se aage). `meta.unread_count` poore list ka hai, sirf current page ka nahi - badge dikhane ke liye yehi use karo.
+
+### 4.17 `POST /notifications/{id}/read`
+
+Ek notification ko read mark karo. Doosre ke account ki notification id doge toh `404` (apni hi dikhti/badalti hai).
+
+Response `200`:
+```json
+{ "message": "Marked as read." }
+```
+
+### 4.18 `POST /notifications/read-all`
+
+Saari apni unread notifications ek saath read mark karo.
+
+Response `200`:
+```json
+{ "message": "All notifications marked as read." }
+```
 
 ---
 

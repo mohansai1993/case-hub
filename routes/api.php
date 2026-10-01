@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\PracticeAreaController;
+use App\Http\Controllers\Api\V1\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -68,6 +69,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         Route::delete('device-tokens', [DeviceTokenController::class, 'destroy'])->name('device-tokens.destroy');
 
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
+
+        Route::post('profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
 
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
