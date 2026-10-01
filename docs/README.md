@@ -8,6 +8,7 @@ Yeh folder batata hai ki ab tak project mein kya-kya bana hai, kaise kaam karta 
 | [02-admin-panel.md](02-admin-panel.md) | Admin panel: login, forgot password, permissions, Clients/Lawyers management (suspend / activate), unke JSON endpoints |
 | [03-mobile-api.md](03-mobile-api.md) | Mobile app ki APIs (Client + Lawyer): register, OTP, login, forgot password. Har endpoint ka dummy request aur response |
 | [04-realtime-chat.md](04-realtime-chat.md) | Client-Advocate real-time chat: Reverb setup, WebSocket connect karne ka tareeka, cases + messages ke REST endpoints |
+| [05-account-and-notifications.md](05-account-and-notifications.md) | Client + Lawyer dono ke liye: password change (logged-in), profile photo update, in-app notifications; aur sirf Lawyer ke liye practice profile (location/experience/specialization/bio) update |
 
 ## Sabse pehle (setup)
 
@@ -25,7 +26,7 @@ php artisan reverb:start        # real-time chat ke liye (alag terminal mein) - 
 - Admin panel: `http://127.0.0.1:8000/` (login page).
 - Local Super Admin (sirf local mein seed hota hai): `admin@casehub.test` / `Password@123`.
 - Production mein pehla Super Admin banane ke liye: `php artisan admin:create-super`.
-- Tests chalane ke liye: `php vendor/bin/phpunit` (178 tests, alag in-memory database use hota hai, tumhara asli database nahi chhuta).
+- Tests chalane ke liye: `php vendor/bin/phpunit` (275 tests, alag in-memory database use hota hai, tumhara asli database nahi chhuta).
 
 ## Zaroori baatein (production se pehle)
 

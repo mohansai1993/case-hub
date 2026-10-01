@@ -137,6 +137,7 @@ Lawyer ke liye extra `lawyer` object bhi aata hai (client mein nahi):
 | 16 | GET | `/notifications` | Bearer | In-app notifications list (Client aur Lawyer dono) |
 | 17 | POST | `/notifications/{id}/read` | Bearer | Ek notification read mark karo |
 | 18 | POST | `/notifications/read-all` | Bearer | Saari notifications read mark karo |
+| 19 | PUT | `/profile/lawyer` | Bearer (sirf Lawyer) | Location/experience/specialization/bio update - poora detail `05-account-and-notifications.md` mein |
 
 ---
 
