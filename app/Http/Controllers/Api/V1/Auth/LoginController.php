@@ -7,6 +7,7 @@ use App\Exceptions\Auth\EmailNotVerified;
 use App\Exceptions\Auth\InvalidCredentials;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
+use App\Http\Requests\Api\Auth\UpdatePasswordRequest;
 use App\Http\Resources\UserResource;
 use App\Models\UserOtp;
 use App\Services\AppAuth\ApiAuthenticator;
@@ -98,6 +99,23 @@ class LoginController extends Controller
         $request->user('sanctum')->tokens()->delete();
 
         return response()->json(['message' => 'Logged out from all devices.']);
+    }
+
+    /**
+     * Changes the password for the signed-in client or lawyer (one endpoint,
+     * same User model either way). Keeps this device signed in; every other
+     * device's token is revoked, same spirit as a forgot-password reset.
+     */
+    public function updatePassword(UpdatePasswordRequest $request): JsonResponse
+    {
+        $user = $request->user('sanctum');
+        $currentToken = $user->currentAccessToken();
+
+        $user->forceFill(['password' => $request->password()])->save();
+
+        $user->tokens()->when($currentToken, fn ($query) => $query->where('id', '!=', $currentToken->id))->delete();
+
+        return response()->json(['message' => 'Password updated successfully.']);
     }
 
     private function sendVerificationOtp(EmailNotVerified $e): void

@@ -128,9 +128,11 @@ Lawyer ke liye extra `lawyer` object bhi aata hai (client mein nahi):
 | 7 | GET | `/auth/me` | Bearer | Current user |
 | 8 | POST | `/auth/logout` | Bearer | Is device se logout |
 | 9 | POST | `/auth/logout-all` | Bearer | Saare devices se logout |
-| 10 | POST | `/auth/forgot-password` | Nahi | Forgot password: OTP bhejo |
-| 11 | POST | `/auth/forgot-password/verify` | Nahi | Forgot password: OTP verify |
-| 12 | POST | `/auth/reset-password` | Nahi | Naya password |
+| 10 | PUT | `/auth/password` | Bearer | Logged-in password change (Settings/Profile) |
+| 11 | POST | `/auth/forgot-password` | Nahi | Forgot password: OTP bhejo |
+| 12 | POST | `/auth/forgot-password/verify` | Nahi | Forgot password: OTP verify |
+| 13 | POST | `/auth/reset-password` | Nahi | Naya password |
+| 14 | GET | `/plans` | Bearer (sirf Client) | Storage plans list (Subscription screen) |
 
 ---
 
@@ -515,7 +517,41 @@ Response `200`:
 
 ---
 
-### 4.10 `POST /auth/forgot-password`
+### 4.10 `PUT /auth/password`
+
+Login ke baad apna password badalna (Client aur Lawyer dono ke liye same endpoint - koi role-specific cheez nahi hai). Forgot-password wale OTP flow se alag hai - yahan current password pata hona zaroori hai.
+
+Header: `Authorization: Bearer <token>`
+
+Request:
+```json
+{
+  "current_password": "OldPass@123",
+  "password": "NewPass@456",
+  "password_confirmation": "NewPass@456"
+}
+```
+
+Response `200`:
+```json
+{ "message": "Password updated successfully." }
+```
+
+Password badalte hi **is device ka token zinda rehta hai** (app logout nahi hota), lekin **baaki saare devices ke tokens turant delete** ho jaate hain - unhe dobara login karna padega.
+
+Response `422` (current password galat):
+```json
+{
+  "message": "The current password field is invalid.",
+  "errors": { "current_password": ["The current password field is invalid."] }
+}
+```
+
+Response `422` (naya password kamzor ya confirmation match nahi karta): reset-password ke `422` jaisa hi shape (dekho 4.13).
+
+---
+
+### 4.11 `POST /auth/forgot-password`
 
 Login screen ka "Forgot Password?". Email **ya** mobile de sakte ho - jo bhi identifier do, OTP usi channel par jaata hai (email do toh email, mobile do toh SMS) - admin panel ke forgot-password jaisa hi rule.
 
@@ -532,7 +568,7 @@ Response `200` (**hamesha yahi**, account ho ya na ho; suspended/unverified acco
 }
 ```
 
-### 4.11 `POST /auth/forgot-password/verify`
+### 4.12 `POST /auth/forgot-password/verify`
 
 Request:
 ```json
@@ -557,7 +593,7 @@ Response `422`:
 }
 ```
 
-### 4.12 `POST /auth/reset-password`
+### 4.13 `POST /auth/reset-password`
 
 Request:
 ```json
@@ -596,6 +632,45 @@ Response `422` (token galat / expire / pehle use ho gaya):
   "code": "invalid_reset_token"
 }
 ```
+
+---
+
+### 4.14 `GET /plans`
+
+Storage subscription plans ki list - sirf **Client** ke liye (lawyers client document-vault storage nahi khareedte). Admin panel se bane plans mein se sirf **active** wale yahan aate hain, popular wala pehle.
+
+Header: `Authorization: Bearer <token>`
+
+Response `200`:
+```json
+{
+  "data": [
+    {
+      "id": 2,
+      "name": "Standard",
+      "storage": "1 GB",
+      "price": 199,
+      "description": "Expanded capacity for corporate files, evidentiary exhibits, and continuous records.",
+      "is_popular": true
+    },
+    {
+      "id": 1,
+      "name": "Basic",
+      "storage": "500 MB",
+      "price": 99,
+      "description": "Essential document vault for individual clients handling standard matter proceedings.",
+      "is_popular": false
+    }
+  ]
+}
+```
+
+Response `403` (lawyer ka token):
+```json
+{ "message": "Only clients can view subscription plans." }
+```
+
+> **Abhi sirf list hai** - kisi plan ko "subscribe/purchase" karne ka koi endpoint nahi hai, kyunki client-to-plan assignment (storage usage tracking, billing, waghera) ka poora feature abhi codebase mein bana hi nahi hai. Yeh list GET admin ke `/admin/subscriptions` page par dikhne wale plans ke saath sync rehta hai (same `plans` table).
 
 ---
 

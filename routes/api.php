@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\CaseController;
 use App\Http\Controllers\Api\V1\CaseMessageController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\NotificationController;
+use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\PracticeAreaController;
 use Illuminate\Support\Facades\Route;
 
@@ -55,6 +56,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
         // Signed-in
         Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
             Route::get('me', [LoginController::class, 'me'])->name('me');
+            Route::put('password', [LoginController::class, 'updatePassword'])->name('password.update');
             Route::post('logout', [LoginController::class, 'logout'])->name('logout');
             Route::post('logout-all', [LoginController::class, 'logoutAll'])->name('logout-all');
         });
@@ -64,6 +66,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
         Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('device-tokens.store');
         Route::delete('device-tokens', [DeviceTokenController::class, 'destroy'])->name('device-tokens.destroy');
+
+        Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
 
         Route::prefix('notifications')->name('notifications.')->group(function () {
             Route::get('/', [NotificationController::class, 'index'])->name('index');
