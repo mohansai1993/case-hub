@@ -395,18 +395,23 @@ class AccountModerationTest extends TestCase
         $this->assertSame(VerificationStatus::Pending, $lawyer->fresh()->lawyerProfile->verification_status);
     }
 
-    public function test_approving_a_lawyer_lets_them_log_in_and_rejecting_blocks_them(): void
+    public function test_approve_and_reject_only_change_the_verification_badge_not_login_access(): void
     {
         $lawyer = User::factory()->lawyer(VerificationStatus::Pending)->create(['email' => 'adv@example.com']);
         $credentials = ['type' => 'lawyer', 'identifier' => 'adv@example.com', 'password' => 'Password@123'];
 
-        $this->postJson('/api/v1/auth/login', $credentials)->assertStatus(403)->assertJsonPath('code', 'lawyer_not_verified');
+        // Pending, approved, rejected - login always works; verification is a
+        // client-facing profile badge only, never an account gate.
+        $this->postJson('/api/v1/auth/login', $credentials)
+            ->assertOk()->assertJsonPath('data.user.lawyer.verification_status', 'pending');
 
         $this->asSuper()->postJson(route('admin.lawyers.approve', $lawyer->user_id))->assertOk();
-        $this->postJson('/api/v1/auth/login', $credentials)->assertOk();
+        $this->postJson('/api/v1/auth/login', $credentials)
+            ->assertOk()->assertJsonPath('data.user.lawyer.verification_status', 'verified');
 
         $this->asSuper()->postJson(route('admin.lawyers.reject', $lawyer->user_id), ['reason' => 'license expired'])->assertOk();
-        $this->postJson('/api/v1/auth/login', $credentials)->assertStatus(403)->assertJsonPath('code', 'lawyer_not_verified');
+        $this->postJson('/api/v1/auth/login', $credentials)
+            ->assertOk()->assertJsonPath('data.user.lawyer.verification_status', 'rejected');
     }
 
     public function test_lawyer_page_offers_approve_or_reject_based_on_current_verification(): void

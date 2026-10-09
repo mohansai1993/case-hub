@@ -12,6 +12,7 @@ use App\Models\SubscriptionCharge;
 use App\Models\User;
 use App\Notifications\SubscriptionCancelled;
 use App\Notifications\SubscriptionRestricted;
+use App\Services\Admin\AdminAlertDispatcher;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -28,6 +29,7 @@ class SubscriptionService
     public function __construct(
         private readonly BillingGateway $gateway,
         private readonly StorageQuotaService $quota,
+        private readonly AdminAlertDispatcher $alerts,
     ) {
     }
 
@@ -129,6 +131,7 @@ class SubscriptionService
         foreach ($subscriptions as $subscription) {
             $subscription->update(['status' => SubscriptionStatus::Restricted, 'restricted_at' => now()]);
             $subscription->client?->notify(new SubscriptionRestricted);
+            $this->alerts->subscriptionRestricted($subscription);
         }
 
         return $subscriptions->count();

@@ -33,13 +33,13 @@
     },
     approve: {
       title: function (n) { return "Approve " + n + "?"; },
-      text: "They will be able to sign in to the app and start accepting cases.",
+      text: "A \"Verified\" badge will show on their profile to clients. This does not affect their ability to sign in.",
       icon: "question",
       confirm: "Yes, approve"
     },
     reject: {
       title: function (n) { return "Reject " + n + "?"; },
-      text: "They will not be able to sign in. They will be emailed the reason you give below.",
+      text: "Their profile will not show the \"Verified\" badge to clients. This does not affect their ability to sign in. They will be emailed the reason you give below.",
       icon: "warning",
       confirm: "Yes, reject",
       danger: true,

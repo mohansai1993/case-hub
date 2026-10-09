@@ -164,6 +164,7 @@ function statusLabel(status) {
 const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]')?.content || "";
 const ROUTES = {
   createDraft: @json(route('admin.notifications.drafts.store')),
+  deleteDraftBase: @json(url('admin/notifications/drafts')),
   recipients: @json(route('admin.notifications.recipients')),
   send: @json(route('admin.notifications.send')),
 };
@@ -260,6 +261,7 @@ function renderDrafts() {
           ${isSelected
             ? '<span class="btn-view btn-view-selected">Selected</span>'
             : `<button class="btn-sm" data-select="${d.id}">Select</button>`}
+          <button class="btn-sm btn-sm-danger" data-delete-draft="${d.id}">Delete</button>
         </td>
       </tr>`;
   }).join("") : '<tr><td colspan="4" class="empty-msg">No notification drafts yet.</td></tr>';
@@ -275,11 +277,46 @@ function renderDrafts() {
     : '<p class="text-muted">Select a notification draft above.</p>';
 }
 
-draftsBody.addEventListener("click", (e) => {
-  const btn = e.target.closest("[data-select]");
-  if (!btn) return;
-  selectedDraftId = Number(btn.dataset.select);
-  renderDrafts();
+draftsBody.addEventListener("click", async (e) => {
+  const selectBtn = e.target.closest("[data-select]");
+  if (selectBtn) {
+    selectedDraftId = Number(selectBtn.dataset.select);
+    renderDrafts();
+    return;
+  }
+
+  const deleteBtn = e.target.closest("[data-delete-draft]");
+  if (deleteBtn) {
+    const confirmed = await Swal.fire({
+      title: "Delete this notification draft?",
+      text: "This cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#e0413a",
+      cancelButtonColor: "#8b8b94",
+      reverseButtons: true,
+      focusCancel: true,
+    }).then((result) => result.isConfirmed);
+
+    if (!confirmed) return;
+
+    const id = Number(deleteBtn.dataset.deleteDraft);
+    deleteBtn.disabled = true;
+
+    try {
+      await api(`${ROUTES.deleteDraftBase}/${id}`, { method: "DELETE" });
+      drafts = drafts.filter((d) => d.id !== id);
+      if (selectedDraftId === id) {
+        selectedDraftId = drafts.length ? drafts[0].id : null;
+      }
+      renderDrafts();
+    } catch (err) {
+      Swal.fire({ icon: "error", title: "Could not delete", text: firstError(err, "Could not delete this draft. Please try again.") });
+      deleteBtn.disabled = false;
+    }
+  }
 });
 
 // Recipients

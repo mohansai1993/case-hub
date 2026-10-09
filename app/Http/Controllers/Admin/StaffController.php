@@ -8,6 +8,7 @@ use App\Http\Requests\Admin\StaffListRequest;
 use App\Http\Requests\Admin\StaffRequest;
 use App\Models\Admin;
 use App\Models\Role;
+use App\Services\Auth\PasswordHistoryGuard;
 use App\Services\Auth\PasswordResetService;
 use App\Support\Identifier;
 use Illuminate\Http\JsonResponse;
@@ -22,6 +23,10 @@ use Illuminate\View\View;
 class StaffController extends Controller
 {
     private const PER_PAGE = 15;
+
+    public function __construct(private readonly PasswordHistoryGuard $passwords)
+    {
+    }
 
     public function index(StaffListRequest $request): View
     {
@@ -96,7 +101,12 @@ class StaffController extends Controller
         ]);
 
         if ($request->filled('password')) {
-            $admin->password = $request->string('password')->toString();
+            $newPassword = $request->string('password')->toString();
+
+            $this->passwords->reject($admin, $newPassword);
+            $this->passwords->remember($admin);
+
+            $admin->password = $newPassword;
         }
 
         $admin->save();

@@ -136,6 +136,7 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
         });
         Route::middleware('permission:notifications.create')->group(function () {
             Route::post('/notifications/drafts', [NotificationController::class, 'storeDraft'])->name('notifications.drafts.store');
+            Route::delete('/notifications/drafts/{draft}', [NotificationController::class, 'destroyDraft'])->name('notifications.drafts.destroy');
             Route::post('/notifications/send', [NotificationController::class, 'send'])->name('notifications.send');
         });
 

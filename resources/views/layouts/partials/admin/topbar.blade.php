@@ -33,11 +33,33 @@
             </div>
           </div>
 
-          <form method="POST" action="{{ route('logout') }}">
+          <form method="POST" action="{{ route('logout') }}" id="logout-form">
             @csrf
             <button type="submit" class="logout-btn" aria-label="Log out" title="Log out">
               <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5M21 12H9"/></svg>
             </button>
           </form>
+          <script>
+            document.getElementById("logout-form").addEventListener("submit", function (e) {
+              if (this.dataset.confirmed === "1") return;
+              e.preventDefault();
+
+              Swal.fire({
+                title: "Log out?",
+                text: "Are you sure you want to log out?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonText: "Yes, log out",
+                cancelButtonText: "Cancel",
+                confirmButtonColor: "#e0413a",
+                cancelButtonColor: "#8b8b94",
+                reverseButtons: true,
+              }).then((result) => {
+                if (!result.isConfirmed) return;
+                this.dataset.confirmed = "1";
+                this.submit();
+              });
+            });
+          </script>
         </div>
       </header>

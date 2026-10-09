@@ -2,11 +2,9 @@
 
 namespace App\Http\Controllers\Api\V1\Auth;
 
-use App\Enums\VerificationStatus;
 use App\Exceptions\Auth\AccountInactive;
 use App\Exceptions\Auth\EmailNotVerified;
 use App\Exceptions\Auth\InvalidCredentials;
-use App\Exceptions\Auth\LawyerNotVerified;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Auth\LoginRequest;
 use App\Http\Requests\Api\Auth\UpdatePasswordRequest;
@@ -14,6 +12,7 @@ use App\Http\Resources\UserResource;
 use App\Models\UserOtp;
 use App\Services\AppAuth\ApiAuthenticator;
 use App\Services\AppAuth\UserOtpService;
+use App\Services\Auth\PasswordHistoryGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Throwable;
@@ -23,6 +22,7 @@ class LoginController extends Controller
     public function __construct(
         private readonly ApiAuthenticator $authenticator,
         private readonly UserOtpService $otps,
+        private readonly PasswordHistoryGuard $passwords,
     ) {
     }
 
@@ -62,16 +62,6 @@ class LoginController extends Controller
                     'email' => $e->user->email,
                     'resend_in' => (int) config('otp.app.resend_after'),
                 ],
-            ], 403);
-        } catch (LawyerNotVerified $e) {
-            $status = $e->user->lawyerProfile->verification_status;
-
-            return response()->json([
-                'message' => $status === VerificationStatus::Rejected
-                    ? 'Your advocate application was not approved. Contact support for details.'
-                    : 'Your account is awaiting admin approval. We will notify you once it is reviewed.',
-                'code' => 'lawyer_not_verified',
-                'data' => ['verification_status' => $status->value],
             ], 403);
         }
 
@@ -122,6 +112,9 @@ class LoginController extends Controller
     {
         $user = $request->user('sanctum');
         $currentToken = $user->currentAccessToken();
+
+        $this->passwords->reject($user, $request->password());
+        $this->passwords->remember($user);
 
         $user->forceFill(['password' => $request->password()])->save();
 

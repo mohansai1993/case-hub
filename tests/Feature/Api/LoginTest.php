@@ -53,27 +53,22 @@ class LoginTest extends ApiTestCase
             ->assertJsonPath('data.user.lawyer.verification_status', 'verified');
     }
 
-    public function test_an_unverified_lawyer_cannot_log_in(): void
+    public function test_an_unverified_lawyer_can_still_log_in(): void
     {
         User::factory()->lawyer(VerificationStatus::Pending)->create(['email' => 'rahul@example.com']);
 
         $this->login(['type' => 'lawyer'])
-            ->assertStatus(403)
-            ->assertJsonPath('code', 'lawyer_not_verified')
-            ->assertJsonPath('data.verification_status', 'pending')
-            ->assertJsonMissingPath('data.token');
-
-        $this->assertDatabaseCount('personal_access_tokens', 0);
+            ->assertOk()
+            ->assertJsonPath('data.user.lawyer.verification_status', 'pending');
     }
 
-    public function test_a_rejected_lawyer_cannot_log_in(): void
+    public function test_a_rejected_lawyer_can_still_log_in(): void
     {
         User::factory()->lawyer(VerificationStatus::Rejected)->create(['email' => 'rahul@example.com']);
 
         $this->login(['type' => 'lawyer'])
-            ->assertStatus(403)
-            ->assertJsonPath('code', 'lawyer_not_verified')
-            ->assertJsonPath('data.verification_status', 'rejected');
+            ->assertOk()
+            ->assertJsonPath('data.user.lawyer.verification_status', 'rejected');
     }
 
     public function test_a_verified_lawyer_who_gets_suspended_is_blocked_by_suspension_not_verification(): void

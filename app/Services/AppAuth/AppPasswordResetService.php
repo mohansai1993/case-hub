@@ -4,6 +4,7 @@ namespace App\Services\AppAuth;
 
 use App\Models\User;
 use App\Models\UserOtp;
+use App\Services\Auth\PasswordHistoryGuard;
 use App\Support\Identifier;
 use Illuminate\Support\Str;
 
@@ -17,8 +18,10 @@ class AppPasswordResetService
 {
     private const PURPOSE = UserOtp::PURPOSE_RESET_PASSWORD;
 
-    public function __construct(private readonly UserOtpService $otps)
-    {
+    public function __construct(
+        private readonly UserOtpService $otps,
+        private readonly PasswordHistoryGuard $passwords,
+    ) {
     }
 
     /** Silent for unknown / unverified / inactive accounts. */
@@ -52,6 +55,9 @@ class AppPasswordResetService
         }
 
         return $this->otps->redeemToken($user, self::PURPOSE, $token, function () use ($user, $newPassword) {
+            $this->passwords->reject($user, $newPassword);
+            $this->passwords->remember($user);
+
             $user->forceFill([
                 'password' => $newPassword,
                 'remember_token' => Str::random(60),

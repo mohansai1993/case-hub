@@ -12,6 +12,7 @@ use App\Models\NotificationDraft;
 use App\Models\User;
 use App\Services\Admin\NotificationBroadcastService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class NotificationController extends Controller
@@ -71,6 +72,13 @@ class NotificationController extends Controller
             'message' => 'Notification draft created.',
             'data' => $draft,
         ], 201);
+    }
+
+    public function destroyDraft(NotificationDraft $draft): Response
+    {
+        $draft->delete();
+
+        return response()->noContent();
     }
 
     public function send(SendNotificationRequest $request): JsonResponse

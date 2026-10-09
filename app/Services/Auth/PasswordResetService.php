@@ -26,8 +26,10 @@ use Throwable;
  */
 class PasswordResetService
 {
-    public function __construct(private readonly AuthAuditLogger $audit)
-    {
+    public function __construct(
+        private readonly AuthAuditLogger $audit,
+        private readonly PasswordHistoryGuard $passwords,
+    ) {
     }
 
     /**
@@ -140,6 +142,9 @@ class PasswordResetService
             ) {
                 return false;
             }
+
+            $this->passwords->reject($admin, $newPassword);
+            $this->passwords->remember($admin);
 
             $admin->forceFill([
                 'password' => $newPassword,

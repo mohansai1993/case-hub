@@ -23,10 +23,14 @@ use Illuminate\Support\Facades\DB;
  */
 class AccountModerationService
 {
+    public function __construct(private readonly AdminAlertDispatcher $alerts)
+    {
+    }
+
     /** Blocks the account from logging in and signs it out everywhere. */
     public function suspend(User $user, Admin $by, string $reason): User
     {
-        return $this->transition($user, function (User $locked) use ($by, $reason) {
+        $result = $this->transition($user, function (User $locked) use ($by, $reason) {
             if ($locked->status === UserStatus::Suspended) {
                 throw new InvalidStateTransition('This account is already suspended.');
             }
@@ -40,12 +44,16 @@ class AccountModerationService
 
             $this->record($locked, $by, AccountAction::SUSPENDED, $from->value, UserStatus::Suspended->value, $reason);
         });
+
+        $this->alerts->staffActionTaken($by, "suspended {$result->name}'s account.", $this->accountUrl($result));
+
+        return $result;
     }
 
     /** Lets a suspended / inactive account log in again. */
     public function activate(User $user, Admin $by): User
     {
-        return $this->transition($user, function (User $locked) use ($by) {
+        $result = $this->transition($user, function (User $locked) use ($by) {
             if ($locked->status === UserStatus::Active) {
                 throw new InvalidStateTransition('This account is already active.');
             }
@@ -55,6 +63,10 @@ class AccountModerationService
 
             $this->record($locked, $by, AccountAction::ACTIVATED, $from->value, UserStatus::Active->value);
         });
+
+        $this->alerts->staffActionTaken($by, "activated {$result->name}'s account.", $this->accountUrl($result));
+
+        return $result;
     }
 
     /** Approves a lawyer's verification request so they can sign in. */
@@ -62,7 +74,7 @@ class AccountModerationService
     {
         $this->guardIsLawyer($lawyer);
 
-        return DB::transaction(function () use ($lawyer, $by) {
+        $result = DB::transaction(function () use ($lawyer, $by) {
             $profile = LawyerProfile::whereKey($lawyer->getKey())->lockForUpdate()->firstOrFail();
 
             if ($profile->verification_status === VerificationStatus::Verified) {
@@ -81,6 +93,10 @@ class AccountModerationService
 
             return $lawyer->refresh();
         });
+
+        $this->alerts->staffActionTaken($by, "approved {$result->name} as a lawyer.", $this->accountUrl($result));
+
+        return $result;
     }
 
     /** Rejects a lawyer's verification request; they cannot sign in until approved. */
@@ -88,7 +104,7 @@ class AccountModerationService
     {
         $this->guardIsLawyer($lawyer);
 
-        return DB::transaction(function () use ($lawyer, $by, $reason) {
+        $result = DB::transaction(function () use ($lawyer, $by, $reason) {
             $profile = LawyerProfile::whereKey($lawyer->getKey())->lockForUpdate()->firstOrFail();
 
             if ($profile->verification_status === VerificationStatus::Rejected) {
@@ -107,6 +123,17 @@ class AccountModerationService
 
             return $lawyer->refresh();
         });
+
+        $this->alerts->staffActionTaken($by, "rejected {$result->name}'s lawyer application.", $this->accountUrl($result));
+
+        return $result;
+    }
+
+    private function accountUrl(User $user): string
+    {
+        return $user->type === UserType::Lawyer
+            ? route('admin.lawyer-details', $user->user_id)
+            : route('admin.client-details', $user->user_id);
     }
 
     private function guardIsLawyer(User $user): void

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UpdatePasswordRequest;
 use App\Models\Plan;
 use App\Services\Auth\AuthAuditLogger;
+use App\Services\Auth\PasswordHistoryGuard;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,8 +15,10 @@ use Illuminate\View\View;
 
 class SettingsController extends Controller
 {
-    public function __construct(private readonly AuthAuditLogger $audit)
-    {
+    public function __construct(
+        private readonly AuthAuditLogger $audit,
+        private readonly PasswordHistoryGuard $passwords,
+    ) {
     }
 
     public function index(): View
@@ -28,6 +31,9 @@ class SettingsController extends Controller
     public function updatePassword(UpdatePasswordRequest $request): JsonResponse
     {
         $admin = $request->user('admin');
+
+        $this->passwords->reject($admin, $request->password());
+        $this->passwords->remember($admin);
 
         $admin->forceFill([
             'password' => $request->password(),

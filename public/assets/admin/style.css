@@ -1845,6 +1845,22 @@ td small {
   background: var(--green);
 }
 
+.avatar-suspended {
+  position: relative;
+}
+
+.avatar-suspended::after {
+  content: "";
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  background: var(--red);
+}
+
 .detail-stack {
   display: flex;
   flex-direction: column;

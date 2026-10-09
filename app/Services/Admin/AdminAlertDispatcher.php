@@ -4,8 +4,11 @@ namespace App\Services\Admin;
 
 use App\Enums\UserType;
 use App\Models\Admin;
+use App\Models\ClientSubscription;
 use App\Models\User;
 use App\Notifications\Admin\NewAccountRegistered;
+use App\Notifications\Admin\StaffActionTaken;
+use App\Notifications\Admin\SubscriptionRestricted as SubscriptionRestrictedAlert;
 use Illuminate\Notifications\Notification as NotificationClass;
 use Illuminate\Support\Facades\Notification;
 
@@ -21,6 +24,27 @@ class AdminAlertDispatcher
         $permission = $user->type === UserType::Lawyer ? 'lawyers.view' : 'clients.view';
 
         $this->notify($permission, new NewAccountRegistered($user));
+    }
+
+    /** Oversight: Super Admins get an alert whenever a non-super-admin staff member moderates an account. */
+    public function staffActionTaken(Admin $by, string $summary, ?string $actionUrl = null): void
+    {
+        if ($by->isSuperAdmin()) {
+            return;
+        }
+
+        $recipients = Admin::with('role')->get()->filter(fn (Admin $admin) => $admin->isSuperAdmin());
+
+        if ($recipients->isEmpty()) {
+            return;
+        }
+
+        Notification::send($recipients, new StaffActionTaken($by, $summary, $actionUrl));
+    }
+
+    public function subscriptionRestricted(ClientSubscription $subscription): void
+    {
+        $this->notify('subscriptions.view', new SubscriptionRestrictedAlert($subscription));
     }
 
     private function notify(string $permission, NotificationClass $notification): void
