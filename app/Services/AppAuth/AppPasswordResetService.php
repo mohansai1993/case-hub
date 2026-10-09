@@ -8,9 +8,10 @@ use App\Support\Identifier;
 use Illuminate\Support\Str;
 
 /**
- * "Forgot password?" for clients and lawyers. The OTP is delivered on
- * whichever channel matches the identifier: email in by email, mobile in by
- * SMS - same rule as the admin panel's forgot-password flow.
+ * "Forgot password?" for clients and lawyers. The OTP always goes out by
+ * email (same as the registration verification code) - email is a mandatory
+ * field on every account, and no SMS provider is wired up yet, so sending to
+ * a mobile number would silently (or, in production, loudly) fail.
  */
 class AppPasswordResetService
 {
@@ -26,7 +27,7 @@ class AppPasswordResetService
         $user = $this->eligibleUser($identifier);
 
         if ($user) {
-            $this->otps->send($user, self::PURPOSE, $identifier->isEmail() ? 'email' : 'sms');
+            $this->otps->send($user, self::PURPOSE, 'email');
         }
     }
 

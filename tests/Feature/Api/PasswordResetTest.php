@@ -63,11 +63,11 @@ class PasswordResetTest extends ApiTestCase
         Notification::assertSentTo($this->user, VerificationCode::class, fn ($n, $channels) => $channels === ['mail']);
     }
 
-    public function test_otp_is_texted_for_a_mobile_identifier(): void
+    public function test_otp_is_emailed_for_a_mobile_identifier_too(): void
     {
         $this->postJson(self::SEND, ['identifier' => '+91 98765 43210'])->assertOk();
 
-        Notification::assertSentTo($this->user, VerificationCode::class, fn ($n, $channels) => in_array('App\Notifications\Channels\SmsChannel', $channels, true));
+        Notification::assertSentTo($this->user, VerificationCode::class, fn ($n, $channels) => $channels === ['mail']);
     }
 
     public function test_the_answer_is_identical_for_unknown_and_unverified_accounts(): void
