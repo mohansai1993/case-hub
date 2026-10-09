@@ -87,7 +87,7 @@
                 {{ $area->is_active ? 'Deactivate' : 'Activate' }}
               </button>
               <button type="button" class="btn-sm btn-sm-danger" data-delete="{{ $area->id }}"
-                @if ($area->lawyers_count > 0) disabled title="In use by lawyers - deactivate instead" @endif>
+                data-in-use="{{ $area->lawyers_count > 0 ? 1 : 0 }}">
                 Delete
               </button>
             </td>
@@ -200,7 +200,16 @@
     }
 
     const deleteBtn = e.target.closest("[data-delete]");
-    if (deleteBtn && !deleteBtn.disabled) {
+    if (deleteBtn) {
+      if (deleteBtn.dataset.inUse === "1") {
+        Swal.fire({
+          icon: "info",
+          title: "Can't delete this specialization",
+          text: "It's assigned to one or more lawyers. Deactivate it instead to hide it from new signups.",
+        });
+        return;
+      }
+
       Swal.fire({
         title: "Delete this specialization?",
         text: "This cannot be undone.",
