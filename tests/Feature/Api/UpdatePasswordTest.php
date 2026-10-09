@@ -63,6 +63,39 @@ class UpdatePasswordTest extends ApiTestCase
             ->assertUnprocessable()->assertJsonValidationErrors('password');
     }
 
+    public function test_cannot_reuse_the_current_password(): void
+    {
+        $user = User::factory()->create();
+
+        $this->update([
+            'password' => self::PASSWORD,
+            'password_confirmation' => self::PASSWORD,
+        ], $this->bearer($user))->assertUnprocessable()->assertJsonValidationErrors('password');
+    }
+
+    public function test_cannot_reuse_one_of_the_last_5_passwords(): void
+    {
+        $user = User::factory()->create();
+        $token = $this->bearer($user);
+
+        $passwords = [self::PASSWORD, 'Second-Pass9', 'Third-Pass99', 'Fourth-Pass9', 'Fifth-Pass99'];
+
+        for ($i = 1; $i < count($passwords); $i++) {
+            $this->putJson(self::UPDATE, [
+                'current_password' => $passwords[$i - 1],
+                'password' => $passwords[$i],
+                'password_confirmation' => $passwords[$i],
+            ], $token)->assertOk();
+        }
+
+        // 5 distinct passwords have now been used (the original + 4 changes) - reusing any of them is blocked.
+        $this->putJson(self::UPDATE, [
+            'current_password' => end($passwords),
+            'password' => self::PASSWORD,
+            'password_confirmation' => self::PASSWORD,
+        ], $token)->assertUnprocessable()->assertJsonValidationErrors('password');
+    }
+
     public function test_other_devices_are_signed_out_but_this_device_stays_signed_in(): void
     {
         $user = User::factory()->create();

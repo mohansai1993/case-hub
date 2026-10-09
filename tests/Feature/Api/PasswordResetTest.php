@@ -149,6 +149,12 @@ class PasswordResetTest extends ApiTestCase
         $this->reset($token)->assertOk();
     }
 
+    public function test_reset_cannot_reuse_the_current_password(): void
+    {
+        $this->reset($this->token(), self::PASSWORD)
+            ->assertStatus(422)->assertJsonValidationErrors('password');
+    }
+
     public function test_reset_rotates_the_remember_token(): void
     {
         $this->user->forceFill(['remember_token' => 'old'])->save();
