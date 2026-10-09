@@ -31,11 +31,18 @@ class SubscriptionService
     ) {
     }
 
-    /** @throws InvalidStateTransition account already has a plan, or the card was declined */
+    /** @throws InvalidStateTransition account already has an active plan, or the card was declined */
     public function subscribe(User $client, Plan $plan): ClientSubscription
     {
-        if ($client->subscription) {
+        $subscription = $client->subscription;
+
+        if ($subscription && $subscription->isActive()) {
             throw new InvalidStateTransition('You already have a subscription. Use upgrade or downgrade instead.');
+        }
+
+        // Cancelled/restricted clients keep their old row (never deleted) - reactivate it instead of erroring out.
+        if ($subscription) {
+            return $this->replacePlan($client, $subscription, $plan, 'subscribe');
         }
 
         $charge = $this->chargeAndRecord($client, null, $plan, 'subscribe');
