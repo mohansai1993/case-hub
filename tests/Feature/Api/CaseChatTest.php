@@ -6,6 +6,7 @@ use App\Enums\CaseStatus;
 use App\Events\MessageSent;
 use App\Models\LegalCase;
 use App\Models\Plan;
+use App\Models\PracticeArea;
 use App\Models\User;
 use App\Notifications\NewCaseMessage;
 use App\Services\Billing\SubscriptionService;
@@ -20,66 +21,117 @@ class CaseChatTest extends ApiTestCase
         app(SubscriptionService::class)->subscribe($client, Plan::factory()->create());
     }
 
+    /** A case already past intake - advocate assigned, chat-ready. */
     private function openCase(User $client, User $advocate, string $status = 'accepted'): LegalCase
     {
-        $case = LegalCase::create([
+        return LegalCase::create([
             'client_id' => $client->user_id,
             'advocate_id' => $advocate->user_id,
             'title' => 'Property dispute',
             'status' => CaseStatus::from($status),
+            'submitted_at' => now(),
         ]);
-
-        return $case;
     }
 
-    // ---- Opening a case -----------------------------------------------------
+    // ---- Starting and submitting a case ----------------------------------------------
 
-    public function test_a_client_can_open_a_case_with_a_lawyer(): void
+    public function test_a_client_can_start_and_submit_a_case_draft(): void
     {
         $client = User::factory()->create();
-        $advocate = User::factory()->lawyer()->create();
         $this->givePlan($client);
+        $area = PracticeArea::create(['slug' => 'labour', 'name' => 'Labour Law', 'is_active' => true]);
 
-        $this->postJson('/api/v1/cases', ['advocate_id' => $advocate->user_id, 'title' => 'Wrongful termination'], $this->bearer($client))
+        $draft = $this->postJson('/api/v1/cases', ['title' => 'Wrongful termination'], $this->bearer($client))
             ->assertCreated()
-            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.is_draft', true)
             ->assertJsonPath('data.client.id', $client->user_id)
-            ->assertJsonPath('data.advocate.id', $advocate->user_id);
+            ->json('data.id');
 
-        $this->assertDatabaseHas('cases', [
-            'client_id' => $client->user_id,
-            'advocate_id' => $advocate->user_id,
-            'status' => 'pending',
-        ]);
+        // Invisible until submitted.
+        $this->getJson('/api/v1/cases', $this->bearer($client))->assertJsonCount(0, 'data');
+
+        $this->postJson("/api/v1/cases/{$draft}/submit", [
+            'title' => 'Wrongful termination',
+            'practice_area_id' => $area->id,
+            'description' => 'Terminated without notice after 3 years.',
+            'incident_date' => '2026-09-01',
+            'location' => 'Mumbai, India',
+        ], $this->bearer($client))
+            ->assertOk()
+            ->assertJsonPath('data.is_draft', false)
+            ->assertJsonPath('data.practice_area.id', $area->id);
+
+        $this->assertDatabaseHas('cases', ['id' => $draft, 'status' => 'pending', 'advocate_id' => null]);
+        $this->getJson('/api/v1/cases', $this->bearer($client))->assertJsonCount(1, 'data');
     }
 
-    public function test_a_lawyer_cannot_open_a_case(): void
+    public function test_a_lawyer_cannot_start_a_case(): void
     {
         $advocate = User::factory()->lawyer()->create();
-        $other = User::factory()->lawyer()->create();
 
-        $this->postJson('/api/v1/cases', ['advocate_id' => $other->user_id, 'title' => 'x'], $this->bearer($advocate))
+        $this->postJson('/api/v1/cases', ['title' => 'x'], $this->bearer($advocate))
             ->assertForbidden();
     }
 
-    public function test_a_client_without_a_storage_plan_cannot_open_a_case(): void
+    public function test_a_client_without_a_storage_plan_cannot_start_a_case_draft(): void
     {
         $client = User::factory()->create();
-        $advocate = User::factory()->lawyer()->create();
 
-        $this->postJson('/api/v1/cases', ['advocate_id' => $advocate->user_id, 'title' => 'x'], $this->bearer($client))
+        $this->postJson('/api/v1/cases', ['title' => 'x'], $this->bearer($client))
             ->assertStatus(422)->assertJsonPath('code', 'storage_full');
 
         $this->assertDatabaseCount('cases', 0);
     }
 
-    public function test_advocate_id_must_be_a_lawyer(): void
+    public function test_submit_requires_a_valid_practice_area(): void
     {
         $client = User::factory()->create();
-        $notALawyer = User::factory()->create();
+        $this->givePlan($client);
+        $draft = $this->postJson('/api/v1/cases', [], $this->bearer($client))->json('data.id');
 
-        $this->postJson('/api/v1/cases', ['advocate_id' => $notALawyer->user_id, 'title' => 'x'], $this->bearer($client))
-            ->assertUnprocessable()->assertJsonValidationErrors('advocate_id');
+        $this->postJson("/api/v1/cases/{$draft}/submit", [
+            'title' => 'x',
+            'practice_area_id' => 999999,
+            'description' => 'x',
+            'incident_date' => '2026-01-01',
+            'location' => 'x',
+        ], $this->bearer($client))->assertUnprocessable()->assertJsonValidationErrors('practice_area_id');
+    }
+
+    public function test_a_client_can_discard_their_own_draft(): void
+    {
+        $client = User::factory()->create();
+        $this->givePlan($client);
+        $draft = $this->postJson('/api/v1/cases', ['title' => 'x'], $this->bearer($client))->json('data.id');
+
+        $this->deleteJson("/api/v1/cases/{$draft}", [], $this->bearer($client))->assertOk();
+
+        $this->assertDatabaseMissing('cases', ['id' => $draft]);
+    }
+
+    public function test_a_submitted_case_cannot_be_discarded_or_resubmitted(): void
+    {
+        $client = User::factory()->create();
+        $advocate = User::factory()->lawyer()->create();
+        $case = $this->openCase($client, $advocate, 'pending');
+
+        $this->deleteJson("/api/v1/cases/{$case->id}", [], $this->bearer($client))->assertStatus(422);
+
+        $this->postJson("/api/v1/cases/{$case->id}/submit", [
+            'title' => 'x', 'practice_area_id' => PracticeArea::create(['slug' => 'x', 'name' => 'x', 'is_active' => true])->id,
+            'description' => 'x', 'incident_date' => '2026-01-01', 'location' => 'x',
+        ], $this->bearer($client))->assertStatus(422);
+    }
+
+    public function test_another_client_cannot_touch_someone_elses_draft(): void
+    {
+        $client = User::factory()->create();
+        $other = User::factory()->create();
+        $this->givePlan($client);
+        $draft = $this->postJson('/api/v1/cases', ['title' => 'x'], $this->bearer($client))->json('data.id');
+        $this->app['auth']->forgetGuards();
+
+        $this->deleteJson("/api/v1/cases/{$draft}", [], $this->bearer($other))->assertForbidden();
     }
 
     // ---- Accept / reject ------------------------------------------------------------

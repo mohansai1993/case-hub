@@ -259,8 +259,8 @@ Response `200`:
 
 Approve hone par:
 - `lawyer_profiles.verification_status` `verified` ho jaata hai, `verified_at` set hota hai.
-- Lawyer ab login kar sakta hai (`03-mobile-api.md` ka `lawyer_not_verified` ab nahi aayega).
-- Lawyer ko **email** jaata hai ("Your CaseHub advocate account has been approved") aur app ke andar ek in-app notification bhi milti hai (jo login karte hi dikhegi).
+- Lawyer pehle se bhi login kar sakta tha - verification login ko kabhi block nahi karti (sirf account `status` suspend/active karta hai). Approve hone se sirf client-facing profile par "Verified" badge dikhne lagta hai.
+- Lawyer ko **email** jaata hai ("Your CaseHub advocate account has been approved") aur app ke andar ek in-app notification bhi milti hai.
 - `account_actions` mein `lawyer_approved` entry banti hai.
 
 Response `422` (pehle se verified): `{ "message": "This advocate is already verified." }`
@@ -281,8 +281,8 @@ Response `200`:
 ```
 
 Reject hone par:
-- `lawyer_profiles.verification_status` `rejected` ho jaata hai. Account suspend nahi hota (`users.status` nahi badalta) - bas login block ho jaata hai verification ki wajah se.
-- Lawyer ko **email** jaata hai reason ke saath (koi in-app notification nahi, kyunki reject hone ke baad woh kabhi login hi nahi kar sakta app mein - database notification kabhi dikhti hi nahi).
+- `lawyer_profiles.verification_status` `rejected` ho jaata hai. Account suspend nahi hota (`users.status` nahi badalta) - aur login bhi block nahi hota, verification login ko kabhi gate nahi karti. Bas ab client-facing profile par "Verified" badge nahi dikhega.
+- Lawyer ko **email** jaata hai reason ke saath, aur app ke andar ek in-app notification bhi milti hai (login karte hi dikhegi, kyunki wo abhi bhi login kar sakta hai).
 - `account_actions` mein `lawyer_rejected` entry banti hai, reason ke saath.
 
 Response `422` (reason nahi diya, ya pehle se rejected) - suspend jaisa hi format.

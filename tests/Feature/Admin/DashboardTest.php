@@ -67,8 +67,8 @@ class DashboardTest extends TestCase
     {
         $client = User::factory()->create();
         $lawyer = User::factory()->lawyer()->create();
-        LegalCase::create(['client_id' => $client->user_id, 'advocate_id' => $lawyer->user_id, 'title' => 'a', 'status' => CaseStatus::Pending]);
-        LegalCase::create(['client_id' => $client->user_id, 'advocate_id' => $lawyer->user_id, 'title' => 'b', 'status' => CaseStatus::Accepted]);
+        LegalCase::create(['client_id' => $client->user_id, 'advocate_id' => $lawyer->user_id, 'title' => 'a', 'status' => CaseStatus::Pending, 'submitted_at' => now()]);
+        LegalCase::create(['client_id' => $client->user_id, 'advocate_id' => $lawyer->user_id, 'title' => 'b', 'status' => CaseStatus::Accepted, 'submitted_at' => now()]);
 
         $this->asSuper()->get(route('admin.dashboard'))
             ->assertSee('Pending')

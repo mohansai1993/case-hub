@@ -7,9 +7,10 @@ use Illuminate\Notifications\Notification;
 
 /**
  * Fired when an admin approves a lawyer's verification request. Sent by
- * mail too (not just database) - the lawyer cannot sign in to see the
- * in-app bell until this approval happens, so email is how they actually
- * learn they can now log in.
+ * mail too (not just database) - the lawyer might not have the app open
+ * right when this happens, so email is how they're actually likely to
+ * notice. Verification never blocked sign-in; approval just unlocks the
+ * "Verified" badge clients see on their profile.
  */
 class LawyerApproved extends Notification
 {
@@ -22,7 +23,7 @@ class LawyerApproved extends Notification
     {
         return [
             'title' => 'Account approved',
-            'body' => 'Your advocate profile has been verified. You can now sign in and start accepting cases.',
+            'body' => 'Your advocate profile has been verified - clients will now see a "Verified" badge on your profile.',
         ];
     }
 
@@ -32,6 +33,6 @@ class LawyerApproved extends Notification
             ->subject('Your CaseHub advocate account has been approved')
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('Your advocate profile has been reviewed and verified by our team.')
-            ->line('You can now sign in to CaseHub and start accepting cases.');
+            ->line('Clients will now see a "Verified" badge on your profile.');
     }
 }

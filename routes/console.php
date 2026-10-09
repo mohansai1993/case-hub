@@ -15,3 +15,7 @@ Schedule::call(fn () => UserOtp::where('expires_at', '<', now()->subDay())->dele
 
 // Cancelled subscriptions whose 7-day grace period has run out -> Restricted.
 Schedule::command('subscriptions:expire-grace-periods')->daily();
+
+// "Create Case" drafts the client started (so uploads had a case_id) but
+// never finished - and any evidence already uploaded to them.
+Schedule::command('cases:purge-abandoned-drafts')->daily();

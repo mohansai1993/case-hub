@@ -44,6 +44,13 @@ return [
         'max_kb' => 20480, // 20MB per file
     ],
 
+    // A case started via the "Create Case" screen but never finalized (submit()
+    // never called) is purged - case row, evidence rows, and the actual files -
+    // after this many hours. See App\Console\Commands\PurgeAbandonedCaseDrafts.
+    'case_drafts' => [
+        'ttl_hours' => (int) env('CASE_DRAFT_TTL_HOURS', 48),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | First Super Admin (used by AdminSeeder)

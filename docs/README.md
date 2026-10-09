@@ -11,6 +11,7 @@ Yeh folder batata hai ki ab tak project mein kya-kya bana hai, kaise kaam karta 
 | [05-account-and-notifications.md](05-account-and-notifications.md) | Client + Lawyer dono ke liye: password change (logged-in), profile photo update, in-app notifications; aur sirf Lawyer ke liye practice profile (location/experience/specialization/bio) update |
 | [06-billing-and-storage.md](06-billing-and-storage.md) | Client storage plans: monthly auto-recurring billing, upgrade/downgrade/cancel, grace period, storage quota aur evidence document upload/download |
 | [07-billing-implementation-guide.md](07-billing-implementation-guide.md) | Storage plans **frontend implementation guide** - mobile app ke liye kaunse screens banane hain, flows, state-based UI, aur QA checklist |
+| [08-case-intake-api.md](08-case-intake-api.md) | "Create Case" screen: draft start karna, evidence upload (har file alag), submit karna, aur abandoned drafts ka automatic cleanup |
 
 ## Sabse pehle (setup)
 
@@ -28,7 +29,7 @@ php artisan reverb:start        # real-time chat ke liye (alag terminal mein) - 
 - Admin panel: `http://127.0.0.1:8000/` (login page).
 - Local Super Admin (sirf local mein seed hota hai): `admin@casehub.test` / `Password@123`.
 - Production mein pehla Super Admin banane ke liye: `php artisan admin:create-super`.
-- Tests chalane ke liye: `php vendor/bin/phpunit` (316 tests, alag in-memory database use hota hai, tumhara asli database nahi chhuta).
+- Tests chalane ke liye: `php artisan test` (350+ tests, alag in-memory database use hota hai, tumhara asli database nahi chhuta).
 
 ## Zaroori baatein (production se pehle)
 

@@ -83,10 +83,10 @@ class DashboardController extends Controller
     private function caseStats(): array
     {
         return [
-            'pending' => LegalCase::where('status', CaseStatus::Pending)->count(),
-            'accepted' => LegalCase::where('status', CaseStatus::Accepted)->count(),
-            'rejected' => LegalCase::where('status', CaseStatus::Rejected)->count(),
-            'closed' => LegalCase::where('status', CaseStatus::Closed)->count(),
+            'pending' => LegalCase::submitted()->where('status', CaseStatus::Pending)->count(),
+            'accepted' => LegalCase::submitted()->where('status', CaseStatus::Accepted)->count(),
+            'rejected' => LegalCase::submitted()->where('status', CaseStatus::Rejected)->count(),
+            'closed' => LegalCase::submitted()->where('status', CaseStatus::Closed)->count(),
         ];
     }
 

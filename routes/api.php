@@ -101,6 +101,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::get('/', [CaseController::class, 'index'])->name('index');
             Route::post('/', [CaseController::class, 'store'])->name('store');
             Route::get('{case}', [CaseController::class, 'show'])->name('show');
+            Route::post('{case}/submit', [CaseController::class, 'submit'])->name('submit');
+            Route::delete('{case}', [CaseController::class, 'destroy'])->name('destroy');
             Route::post('{case}/accept', [CaseController::class, 'accept'])->name('accept');
             Route::post('{case}/reject', [CaseController::class, 'reject'])->name('reject');
 

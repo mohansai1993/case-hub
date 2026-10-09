@@ -22,10 +22,9 @@ VERIFY YOUR ACCOUNT  (4 digit OTP)
 Home
 
 LOGIN (Client/Lawyer tab)
-   |-- 200 -> token
+   |-- 200 -> token  (Lawyer ke liye verification_status bhi aata hai - sirf "Verified" badge ke liye, login block nahi karta)
    |-- 403 email_not_verified -> OTP screen kholo (naya OTP apne aap chala gaya)
    |-- 403 account_inactive    -> "account suspend hai" dikhao
-   |-- 403 lawyer_not_verified -> (sirf Lawyer) "admin approval ka wait hai" ya "application reject hui" dikhao
    `-- 401 invalid_credentials -> "galat email/mobile ya password"
 
 FORGOT PASSWORD:  forgot-password -> forgot-password/verify -> reset-password -> LOGIN
@@ -56,7 +55,6 @@ FORGOT PASSWORD:  forgot-password -> forgot-password/verify -> reset-password ->
 | 401 | (no code) `Unauthenticated.` | Token nahi / galat / expire | Login screen par bhejo |
 | 403 | `email_not_verified` | Registration poori nahi hui (email verify nahi hua) | OTP screen kholo |
 | 403 | `account_inactive` | Account suspend / inactive | "Contact support" dikhao |
-| 403 | `lawyer_not_verified` | Sirf Lawyer: admin ne abhi approve nahi kiya (`data.verification_status`: `pending` ya `rejected`) | `pending` -> "review ho raha hai"; `rejected` -> `message` seedha dikhao (reject ki wajah usi mein hai) |
 | 422 | `invalid_otp` | OTP galat / expire / bahut galat guesses | Dobara try ya Resend |
 | 422 | `invalid_reset_token` | Password reset ka session expire | Forgot password dobara shuru karo |
 | 429 | - | Bahut zyada requests | `Retry-After` header (seconds) ke baad try karo |
@@ -113,7 +111,7 @@ Lawyer ke liye extra `lawyer` object bhi aata hai (client mein nahi):
 |---|---|
 | `type` | `client`, `lawyer` |
 | `status` | `active`, `inactive`, `suspended` |
-| `lawyer.verification_status` | `pending` (registration ke baad default), `verified` (admin ne approve kiya - tabhi login ho sakta hai), `rejected` (admin ne reject kiya) |
+| `lawyer.verification_status` | `pending` (registration ke baad default), `verified` (admin ne approve kiya), `rejected` (admin ne reject kiya). **Login ko ye block nahi karta** - sirf client-facing lawyer profile par "Verified" badge dikhane ke liye hai; account access `status` (active/suspended) se control hota hai |
 
 ---
 
@@ -301,7 +299,7 @@ Response `201`:
 }
 ```
 
-- Lawyer `verification_status: "pending"` se shuru hota hai. Email verify karne ke baad bhi **login tab tak nahi hoga jab tak admin approve na kare** (`403 lawyer_not_verified` - dekho section 2 ka error table aur 4.4 Login). Lawyer khud apna verification_status set/verify nahi kar sakta (request mein bhejne par ignore).
+- Lawyer `verification_status: "pending"` se shuru hota hai. Email verify karne ke baad **login turant ho sakta hai** - verification login ko block nahi karti, sirf client-facing profile par "Verified" badge ke liye hai (dekho section 2 ka error table aur 4.4 Login). Lawyer khud apna verification_status set/verify nahi kar sakta (request mein bhejne par ignore).
 - Photo galat ho toh `422`: `errors.photo` = `"The profile photo must be a JPG or PNG image."` ya `"The profile photo must not be larger than 5MB."`.
 - Practice area galat ho toh `errors.practice_areas.0` (galat index ke saath); khaali ho toh `"Please select at least one practice area."`.
 
@@ -445,15 +443,6 @@ Response `403` (account suspend / inactive):
 {
   "message": "Your account is not active. Please contact support.",
   "code": "account_inactive"
-}
-```
-
-Response `403` (sirf Lawyer: password sahi hai, email bhi verified hai, par admin ne abhi approve nahi kiya - `data.verification_status` `pending` ya `rejected`):
-```json
-{
-  "message": "Your account is awaiting admin approval. We will notify you once it is reviewed.",
-  "code": "lawyer_not_verified",
-  "data": { "verification_status": "pending" }
 }
 ```
 
@@ -772,10 +761,10 @@ Response `200`:
 
 ## 5. Kuch aur zaroori baatein
 
-- **Registration OTP hamesha EMAIL se jaata hai** (`MAIL_MAILER` config se) - yeh identifier-independent hai, verification email par hi hoti hai. **Forgot-password ka OTP identifier follow karta hai**: email do toh email (`MAIL_MAILER`), mobile do toh SMS (`App\Contracts\SmsGateway`).
-- **Dev mein dekhne ka tareeka:** `MAIL_MAILER=log` ho toh mail wala OTP `storage/logs/laravel.log` mein mail ki tarah dikhta hai (subject "Your CaseHub verification code"). SMS provider abhi nahi laga hai (`App\Services\Sms\LogSmsGateway` sirf ek dev stand-in hai), isliye mobile se forgot-password try karne par (dev mein) `[sms:log] to 9876543210: ...` is tarah log mein dikhta hai, aur **production mein yeh error dega** jab tak real `SmsGateway` implement + bind na ho (`config/otp.php` ka comment dekho).
+- **Registration OTP aur Forgot-Password OTP dono hamesha EMAIL se jaate hain** (`MAIL_MAILER` config se), chahe app mein identifier mobile hi kyun na diya ho - har account ka email mandatory hota hai registration par, aur abhi koi real SMS provider wired nahi hai, isliye dono flows email par hi bharosa karte hain.
+- **Dev mein dekhne ka tareeka:** `MAIL_MAILER=log` ho toh OTP `storage/logs/laravel.log` mein mail ki tarah dikhta hai (subject "Your CaseHub verification code"). SMS gateway (`App\Services\Sms\LogSmsGateway`) sirf ek dev stand-in hai jo kabhi real SMS nahi bhejta aur production mein use hote hi error deta hai - isliye abhi koi flow SMS par bharosa nahi karta.
 - **Photo URL:** `image_url` ek poora URL hota hai (`APP_URL` par based). Photo dikhne ke liye `php artisan storage:link` ek baar chalana zaroori hai.
-- **Admin ka asar:** admin panel se client/lawyer suspend hote hi uske saare tokens delete ho jaate hain, aur woh dobara login nahi kar sakta (`403 account_inactive`) jab tak admin activate na kare. Lawyer ke liye ek extra control hai: **Approve/Reject** (`verification_status`) - jab tak admin approve na kare, lawyer login hi nahi kar sakta (`403 lawyer_not_verified`), chahe account Active ho aur email bhi verified ho. Suspend/Activate aur Approve/Reject dono alag-alag hain - suspend karne se verification_status nahi badalta.
+- **Admin ka asar:** admin panel se client/lawyer suspend hote hi uske saare tokens delete ho jaate hain, aur woh dobara login nahi kar sakta (`403 account_inactive`) jab tak admin activate na kare. Lawyer ke liye ek alag, **independent** control bhi hai: **Approve/Reject** (`verification_status`) - ye login ko kabhi block nahi karta, sirf client-facing profile par "Verified" badge control karta hai. Suspend/Activate aur Approve/Reject dono bilkul alag axes hain.
 - **`APP_DEBUG=false` production mein zaroori:** `true` hone par error responses mein file path aur stack trace bhi aa jaate hain. Upar ke examples `false` waali (safe) shape dikhate hain.
 - **Token kitne der:** normal 7 din, `remember: true` par 30 din (`.env` se badal sakte ho).
 

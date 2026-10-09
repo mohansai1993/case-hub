@@ -6,9 +6,9 @@ use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 /**
- * Fired when an admin rejects a lawyer's verification request. Mail only -
- * a rejected lawyer can never sign in to see an in-app notification, so a
- * database record here would just be dead data nobody can read.
+ * Fired when an admin rejects a lawyer's verification request. Verification
+ * never blocks sign-in, so the lawyer can still see this in-app - it just
+ * means their profile won't show the "Verified" badge to clients.
  */
 class LawyerRejected extends Notification
 {
@@ -18,7 +18,15 @@ class LawyerRejected extends Notification
 
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['database', 'mail'];
+    }
+
+    public function toDatabase(object $notifiable): array
+    {
+        return [
+            'title' => 'Advocate application rejected',
+            'body' => 'Reason: ' . $this->reason,
+        ];
     }
 
     public function toMail(object $notifiable): MailMessage

@@ -20,10 +20,19 @@ class CaseResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
+            'practice_area' => $this->whenLoaded('practiceArea', fn () => $this->practiceArea ? [
+                'id' => $this->practiceArea->id,
+                'name' => $this->practiceArea->name,
+            ] : null),
+            'description' => $this->description,
+            'incident_date' => $this->incident_date?->toDateString(),
+            'location' => $this->location,
             'status' => $this->status->value,
+            'is_draft' => $this->isDraft(),
             'client' => new UserResource($this->whenLoaded('client')),
             'advocate' => new UserResource($this->whenLoaded('advocate')),
             'unread_count' => (int) ($this->unread_count ?? 0),
+            'submitted_at' => $this->submitted_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }
