@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\PlanStorageUnit;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /** A storage capacity tier clients subscribe to - billed monthly, auto-renewing. */
 class Plan extends Model
@@ -22,6 +23,16 @@ class Plan extends Model
             'is_popular' => 'boolean',
             'is_active' => 'boolean',
         ];
+    }
+
+    public function clientSubscriptions(): HasMany
+    {
+        return $this->hasMany(ClientSubscription::class);
+    }
+
+    public function subscriptionCharges(): HasMany
+    {
+        return $this->hasMany(SubscriptionCharge::class);
     }
 
     public function storageLabel(): string

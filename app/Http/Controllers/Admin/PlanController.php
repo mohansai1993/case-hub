@@ -112,6 +112,12 @@ class PlanController extends Controller
 
     public function destroy(Plan $plan): JsonResponse
     {
+        if ($plan->clientSubscriptions()->exists() || $plan->subscriptionCharges()->exists()) {
+            return response()->json([
+                'message' => 'This plan has subscription or billing history and cannot be deleted. Deactivate it instead to hide it from new signups.',
+            ], 422);
+        }
+
         $plan->delete();
 
         return response()->json(['message' => 'Plan deleted.']);
