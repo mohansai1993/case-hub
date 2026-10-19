@@ -60,7 +60,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             ->middleware('throttle:api-password-reset')->name('password.reset');
 
         // Signed-in
-        Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
+        Route::middleware(['auth:sanctum', 'api.active', 'touch.active', 'throttle:api'])->group(function () {
             Route::get('me', [LoginController::class, 'me'])->name('me');
             Route::put('password', [LoginController::class, 'updatePassword'])->name('password.update');
             Route::post('logout', [LoginController::class, 'logout'])->name('logout');
@@ -71,7 +71,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     // Signed-in, always reachable regardless of subscription state (a
     // restricted client must still be able to view/manage billing and their
     // own profile - see docs/06-billing-and-storage.md).
-    Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
+    Route::middleware(['auth:sanctum', 'api.active', 'touch.active', 'throttle:api'])->group(function () {
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
         Route::get('lawyers', [LawyerController::class, 'index'])->name('lawyers.index');
         Route::get('lawyers/{lawyer}', [LawyerController::class, 'show'])->name('lawyers.show');
@@ -90,7 +90,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     });
 
     // Signed-in, locked out entirely once a client's grace period expires.
-    Route::middleware(['auth:sanctum', 'api.active', 'subscription.active', 'throttle:api'])->group(function () {
+    Route::middleware(['auth:sanctum', 'api.active', 'touch.active', 'subscription.active', 'throttle:api'])->group(function () {
         Route::post('device-tokens', [DeviceTokenController::class, 'store'])->name('device-tokens.store');
         Route::delete('device-tokens', [DeviceTokenController::class, 'destroy'])->name('device-tokens.destroy');
 

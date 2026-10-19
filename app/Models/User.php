@@ -46,10 +46,14 @@ class User extends Authenticatable
         'is_verified'        => 'boolean',
         'email_verified_at'  => 'datetime',
         'mobile_verified_at' => 'datetime',
+        'last_active_at'     => 'datetime',
         'type'               => UserType::class,
         'status'             => UserStatus::class,
         'password'           => 'hashed',
     ];
+
+    /** How recently `last_active_at` must be for the chat "online" dot - see TouchLastActive. */
+    private const ONLINE_THRESHOLD_MINUTES = 2;
 
     protected $hidden = [
         'password',
@@ -158,6 +162,13 @@ class User extends Authenticatable
     public function isActive(): bool
     {
         return $this->status === UserStatus::Active;
+    }
+
+    /** Recently active (TouchLastActive updates this on authenticated API requests). */
+    public function isOnline(): bool
+    {
+        return $this->last_active_at !== null
+            && $this->last_active_at->gt(now()->subMinutes(self::ONLINE_THRESHOLD_MINUTES));
     }
 
     public function hasVerifiedMobile(): bool

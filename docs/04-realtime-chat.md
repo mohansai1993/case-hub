@@ -2,7 +2,7 @@
 
 Client aur Lawyer ke beech per-case real-time chat. **Laravel Reverb** (Laravel ka apna WebSocket server) se chalta hai. Redis **nahi** use ho raha - single server ke liye Reverb ka apna in-memory driver kaafi hai (dekho project overview mein "Redis vs Reverb" wala decision).
 
-> **Case feature abhi minimal hai.** Chat ko attach karne ke liye bas itna bana hai: client kisi lawyer ko case ke liye invite karta hai (`title` + `advocate_id`), lawyer accept/reject karta hai, accept hone par chat khulti hai. Poora case-management (documents, description, location/date, status history) **abhi nahi bana** - woh alag feature hai.
+> Case kaise banta hai, evidence upload, aur lawyer kaise assign hota hai (client browse karke pick karta hai, admin approve karta hai) - yeh sab alag docs mein hai (`08-case-intake-api.md`, `09-case-assignment-api.md`). Yahan sirf us poore flow ke **baad** ka hissa hai: lawyer ka accept/reject, aur chat (messages, ticks, presence).
 
 ---
 
@@ -88,7 +88,7 @@ events  = "message.sent", "messages.delivered", "messages.read"
 }
 ```
 
-**`messages.delivered`** aur **`messages.read`** (WhatsApp-style ticks - grey/grey-grey/blue, poora detail section 4.5-4.6 mein hai):
+**`messages.delivered`** aur **`messages.read`** (WhatsApp-style ticks - grey/grey-grey/blue, poora detail section 4.4-4.5 mein hai):
 ```json
 { "delivered_by": "448dc022-5370-43e7-bc16-a60c8a77427e", "delivered_at": "2026-10-21T12:05:30+00:00" }
 ```
@@ -108,45 +108,19 @@ Sab `auth:sanctum` + `api.active` ke peeche hain (login ke baad).
 | # | Method | URL | Kya karta hai |
 |---|---|---|---|
 | 1 | GET | `/cases` | Apne saare cases (client ya advocate, dono roles mein) |
-| 2 | POST | `/cases` | Naya case kholo (sirf Client) |
-| 3 | GET | `/cases/{case}` | Ek case ki detail |
-| 4 | POST | `/cases/{case}/accept` | Advocate case accept kare |
-| 5 | POST | `/cases/{case}/reject` | Advocate case reject kare |
-| 6 | GET | `/cases/{case}/messages` | Message history (paginated - page 1 sabse naya conversation, lekin har page ke andar oldest-first) |
-| 7 | POST | `/cases/{case}/messages` | Message bhejo |
-| 8 | POST | `/cases/{case}/messages/delivered` | "Main online hoon" ack - dusre party ke saare undelivered messages ko deliver mark karo (grey -> double-grey tick) |
-| 9 | POST | `/cases/{case}/messages/read` | Chat khuli/focus hui - dusre party ke unread messages ko read mark karo (double-grey -> double-blue tick) |
+| 2 | GET | `/cases/{case}` | Ek case ki detail |
+| 3 | POST | `/cases/{case}/accept` | Advocate case accept kare |
+| 4 | POST | `/cases/{case}/reject` | Advocate case reject kare |
+| 5 | GET | `/cases/{case}/messages` | Message history (paginated - page 1 sabse naya conversation, lekin har page ke andar oldest-first) |
+| 6 | POST | `/cases/{case}/messages` | Message bhejo |
+| 7 | POST | `/cases/{case}/messages/delivered` | "Main online hoon" ack - dusre party ke saare undelivered messages ko deliver mark karo (grey -> double-grey tick) |
+| 8 | POST | `/cases/{case}/messages/read` | Chat khuli/focus hui - dusre party ke unread messages ko read mark karo (double-grey -> double-blue tick) |
 
-### 4.1 `POST /cases` - Case kholo
+> Case **banane** (`POST /cases`, draft + submit) ka pura flow `08-case-intake-api.md` mein hai, aur **lawyer assign karne** (browse + pick + admin-approval) ka flow `09-case-assignment-api.md` mein hai - dono is doc ka scope nahi hain. Yahan se shuru hota hai jahan case pehle se `status: "assigned"` hai (admin ne lawyer approve kar diya) - ab lawyer ka accept/reject aur chat.
 
-Sirf **Client** call kar sakta hai.
+### 4.1 `POST /cases/{case}/accept` aur `/reject`
 
-Request:
-```json
-{ "advocate_id": "d1fdf080-fd81-4b7b-87d6-bfeeb2384858", "title": "Wrongful termination" }
-```
-
-Response `201`:
-```json
-{
-  "message": "Case created.",
-  "data": {
-    "id": 42,
-    "title": "Wrongful termination",
-    "status": "pending",
-    "client": { "id": "...", "name": "Rahul Sharma", "...": "..." },
-    "advocate": { "id": "...", "name": "Adv. Sarah Jenkins", "...": "..." },
-    "unread_count": 0,
-    "created_at": "2026-09-28T12:00:00+00:00"
-  }
-}
-```
-
-`advocate_id` kisi bhi registered lawyer ka `user_id` ho sakta hai (frontend ko lawyer chunne ke liye koi "browse lawyers" list UI khud banani hogi - abhi is document ka scope nahi hai). Lawyer khud case create nahi kar sakta (`403`).
-
-### 4.2 `POST /cases/{case}/accept` aur `/reject`
-
-Sirf us case ka **advocate** call kar sakta hai. Sirf `pending` case par chalta hai - dusri baar chalane par `422`: `{ "message": "This case has already been decided." }`.
+Sirf us case ka **advocate** call kar sakta hai. Sirf `assigned` case par chalta hai - dusri baar chalane par `422`: `{ "message": "This case has already been decided." }`.
 
 Response `200`:
 ```json
@@ -155,7 +129,7 @@ Response `200`:
 
 **Chat sirf `accepted` case par khulti hai.** Pending ya rejected case par message bhejne ki koshish `422`: `{ "message": "This case is not open for messages yet." }`.
 
-### 4.3 `GET /cases/{case}/messages` - History
+### 4.2 `GET /cases/{case}/messages` - History
 
 Response `200`:
 ```json
@@ -171,9 +145,9 @@ Response `200`:
 
 `is_mine` current logged-in user ke hisaab se hai (frontend ko khud sender_id compare nahi karna padta).
 
-`status` teen values le sakta hai - `"sent"` (1 grey tick), `"delivered"` (2 grey tick), `"read"` (2 blue tick). **Ticks sirf apne `is_mine: true` messages par dikhao** - doosri party ke message par tick ka koi matlab nahi hai. `GET /messages` khud koi status change nahi karta, sirf current state dikhata hai - delivered/read sirf section 4.5 aur 4.6 wale calls se set hote hain.
+`status` teen values le sakta hai - `"sent"` (1 grey tick), `"delivered"` (2 grey tick), `"read"` (2 blue tick). **Ticks sirf apne `is_mine: true` messages par dikhao** - doosri party ke message par tick ka koi matlab nahi hai. `GET /messages` khud koi status change nahi karta, sirf current state dikhata hai - delivered/read sirf section 4.4 aur 4.5 wale calls se set hote hain.
 
-### 4.4 `POST /cases/{case}/messages` - Bhejo
+### 4.3 `POST /cases/{case}/messages` - Bhejo
 
 Request:
 ```json
@@ -185,7 +159,7 @@ Response `201`: wahi shape jo history mein ek message ki hoti hai.
 
 Ye call: (a) DB mein save karta hai, (b) Reverb par turant broadcast karta hai, (c) dusre party ko push notification bhejta hai (queued).
 
-### 4.5 `POST /cases/{case}/messages/delivered` - "Main online hoon" ack
+### 4.4 `POST /cases/{case}/messages/delivered` - "Main online hoon" ack
 
 Body nahi chahiye. **Jaise hi WebSocket connect ho** (chat screen khuli ho ya na ho - bas app foreground mein aaye/socket judhe), yeh call karo. Sirf **dusre party ke** undelivered messages ko deliver mark karta hai.
 
@@ -193,27 +167,59 @@ Response `200`: `{ "message": "Marked as delivered." }`
 
 Kam se kam ek message deliver hua ho tabhi `messages.delivered` WebSocket event doosri party ko broadcast hota hai (kuch bhi pending na ho toh koi event nahi jaata, noise nahi hota). **Idempotent hai** - baar baar call karne mein koi harm nahi, reconnect/foreground hone par dobara call karna best practice hai.
 
-### 4.6 `POST /cases/{case}/messages/read`
+### 4.5 `POST /cases/{case}/messages/read`
 
 Body nahi chahiye. Chat screen actually khulne/focus hone par call karo. **Dusre party ke** unread messages ko read mark karta hai (apne khud ke bheje hue messages affect nahi hote) - aur saath mein `delivered_at` bhi backfill kar deta hai (agar kisi wajah se delivered-ack miss ho gaya tha, read hamesha delivered implicitly bhi hota hai).
 
 Response `200`: `{ "message": "Marked as read." }`
 
-### 4.7 Common errors
+### 4.6 Common errors
 
 | Status | Kab |
 |---|---|
 | `401` | Login nahi hai |
-| `403` | Case se related nahi ho (na client, na advocate), ya lawyer ne case create/accept karne ki koshish ki jo unka role allow nahi karta |
+| `403` | Case se related nahi ho (na client, na advocate), ya client ne khud apna case accept/reject karne ki koshish ki (yeh sirf advocate kar sakta hai) |
 | `404` | Case exist nahi karta |
 | `422` | Validation, ya case abhi `accepted` nahi hai (messages ke liye), ya case already decided (accept/reject ke liye) |
 
 ---
 
-## 5. Kya jaan-bujh kar chhoda gaya (abhi)
+## 5. Profile picture & Presence (online/offline, last seen)
 
-- Typing indicators / online-presence (Reverb presence channels se ban sakta hai, abhi nahi banaya) - "delivered" tick isse alag hai (section 4.5), woh ek simple ack call hai, presence channel nahi.
-- Multiple devices par alag-alag delivered/read status (ek hi account ke 2 phone) - jo bhi device pehle ack kare wahi mark ho jaata hai.
+Chat screen ke header mein doosri party ki photo aur online status dikhane ke liye.
+
+### 5.1 Profile picture - already available hai, koi alag call nahi chahiye
+
+`GET /cases/{case}` (section 4) ka `client` aur `advocate`, dono objects mein pehle se `image_url` hota hai - chat header isi se bhar do, koi naya endpoint nahi hai.
+
+### 5.2 Online / Offline + "Last seen"
+
+`client` aur `advocate` dono objects mein (sirf case ke andar - general app mein kahin aur nahi, privacy ki wajah se, neeche dekho) do naye fields hain:
+
+```json
+{
+  "id": "...",
+  "name": "Adv. Sarah Jenkins",
+  "image_url": "...",
+  "is_online": false,
+  "last_active_at": "2026-10-22T11:58:00+00:00",
+  "...": "..."
+}
+```
+
+- `is_online: true` - iska matlab woh pichle **2 minute** ke andar app use kar rahe the (koi bhi API call - sirf chat screen khuli hona zaroori nahi). Isse zyada purana ho toh `false`.
+- `last_active_at` - raw ISO8601 timestamp hai, **"2 minutes ago" jaisa text backend nahi bhejta** - frontend khud relative-time format kare (jaisa `created_at` har jagah hota hai).
+- `last_active_at: null` - matlab yeh user kabhi kisi authenticated API call mein nahi aaya (bahut purana/test account) - is case mein sirf "offline" dikhao, "last seen" mat dikhao.
+- **Kaise update hota hai:** server-side, har authenticated request par ek throttled touch hota hai (1 minute mein ek baar se zyada DB write nahi) - **frontend ko koi alag "heartbeat" call bhejne ki zaroorat nahi**, normal app usage (cases list refresh, messages fetch, waghera) khud hi presence ko zinda rakhta hai.
+- **Live update:** real-time WebSocket push nahi hai is field ke liye abhi (presence channel use nahi kiya gaya, jaan-bujh kar simple rakha hai - section 6 dekho). Jab bhi `GET /cases/{case}` dobara call ho (chat screen open/resume, ya periodic refresh), tazi values aa jaayengi.
+- **Privacy:** yeh fields sirf `GET /cases/{case}` (aur list) ke `client`/`advocate` mein hain - `GET /lawyers` / `GET /lawyers/{id}` (general directory, `09-case-assignment-api.md`) mein **nahi** hain. Matlab koi lawyer ka online-status sirf unhi clients ko pata chalega jinke saath unki actual case hai - poori directory browse karke "kaun abhi online hai" track nahi kiya ja sakta.
+
+---
+
+## 6. Kya jaan-bujh kar chhoda gaya (abhi)
+
+- Typing indicators, aur presence ka **turant/instant** (WebSocket push) version - abhi jo hai woh poll-based hai (section 5.2), Reverb presence channels se "live" bhi ban sakta hai, jaan-bujh kar simple rakha gaya hai.
+- Multiple devices par alag-alag delivered/read/presence status (ek hi account ke 2 phone) - jo bhi device pehle ack kare wahi mark ho jaata hai.
 - Message edit/delete, attachments/files in chat.
 - Admin panel se chat dekhna/moderate karna.
 

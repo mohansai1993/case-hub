@@ -7,7 +7,7 @@ Yeh folder batata hai ki ab tak project mein kya-kya bana hai, kaise kaam karta 
 | [01-project-overview.md](01-project-overview.md) | Poora project ek nazar mein: architecture, database tables, roles/permissions, security, setup, tests, aur jo abhi baaki hai |
 | [02-admin-panel.md](02-admin-panel.md) | Admin panel: login, forgot password, permissions, Clients/Lawyers management (suspend / activate), unke JSON endpoints |
 | [03-mobile-api.md](03-mobile-api.md) | Mobile app ki APIs (Client + Lawyer): register, OTP, login, forgot password. Har endpoint ka dummy request aur response |
-| [04-realtime-chat.md](04-realtime-chat.md) | Client-Advocate real-time chat: Reverb setup, WebSocket connect karne ka tareeka, cases + messages ke REST endpoints |
+| [04-realtime-chat.md](04-realtime-chat.md) | Client-Advocate real-time chat: Reverb setup, WebSocket connect karne ka tareeka, cases + messages ke REST endpoints, delivered/read ticks, profile picture + online/last-seen presence |
 | [05-account-and-notifications.md](05-account-and-notifications.md) | Client + Lawyer dono ke liye: password change (logged-in), profile photo update, in-app notifications; aur sirf Lawyer ke liye practice profile (location/experience/specialization/bio) update |
 | [06-billing-and-storage.md](06-billing-and-storage.md) | Client storage plans: monthly auto-recurring billing, upgrade/downgrade/cancel, grace period, storage quota aur evidence document upload/download |
 | [07-billing-implementation-guide.md](07-billing-implementation-guide.md) | Storage plans **frontend implementation guide** - mobile app ke liye kaunse screens banane hain, flows, state-based UI, aur QA checklist |

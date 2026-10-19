@@ -7,6 +7,7 @@ use App\Http\Middleware\NoStore;
 use App\Http\Middleware\RequirePermission;
 use App\Http\Middleware\RequireSuperAdmin;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\TouchLastActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -35,6 +36,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'no-store' => NoStore::class,
             'api.active' => EnsureUserIsActive::class,
             'subscription.active' => EnsureSubscriptionNotRestricted::class,
+            'touch.active' => TouchLastActive::class,
         ]);
 
         // Not signed in -> login page. Already signed in -> their home section.

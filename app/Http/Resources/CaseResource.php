@@ -30,8 +30,8 @@ class CaseResource extends JsonResource
             'location' => $this->location,
             'status' => $this->status->value,
             'is_draft' => $this->isDraft(),
-            'client' => new UserResource($this->whenLoaded('client')),
-            'advocate' => new UserResource($this->whenLoaded('advocate')),
+            'client' => new CaseParticipantResource($this->whenLoaded('client')),
+            'advocate' => new CaseParticipantResource($this->whenLoaded('advocate')),
             'assignment_request' => $this->whenLoaded('latestAssignmentRequest', fn () => $this->latestAssignmentRequest
                 ? new CaseAssignmentRequestResource($this->latestAssignmentRequest)
                 : null),
