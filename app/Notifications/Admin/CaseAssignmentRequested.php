@@ -28,7 +28,7 @@ class CaseAssignmentRequested extends Notification
 
         return [
             'title' => 'New lawyer assignment request',
-            'body' => "Case #{$this->request->case_id} requested {$this->request->lawyer->name}",
+            'body' => "{$this->request->case->caseNumber()} requested {$this->request->lawyer->name}",
             'action_url' => route('admin.case-assignment-request-details', $this->request->id),
         ];
     }

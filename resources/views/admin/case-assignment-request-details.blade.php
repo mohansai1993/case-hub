@@ -25,7 +25,7 @@
   <div class="client-main">
     <div>
       <h2 class="client-name">
-        Case #{{ $case->id }} &middot; {{ $case->title }}
+        {{ $case->caseNumber() }} &middot; {{ $case->title }}
         @php
           $statusClass = match ($status->value) {
             'approved' => 'status-active',
@@ -52,6 +52,10 @@
     </div>
 
     <div class="info-grid info-grid-3">
+      <div class="info-item">
+        <span>Case ID</span>
+        <strong>{{ $case->caseNumber() }}</strong>
+      </div>
       <div class="info-item">
         <span>Case Title</span>
         <strong>{{ $case->title }}</strong>

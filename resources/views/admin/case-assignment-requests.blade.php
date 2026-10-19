@@ -36,7 +36,7 @@
       <tbody>
         @forelse ($requests as $assignmentRequest)
           <tr>
-            <td><strong>Case #{{ $assignmentRequest->case_id }}</strong><small>{{ $assignmentRequest->case->title }}</small></td>
+            <td><strong>{{ $assignmentRequest->case->caseNumber() }}</strong><small>{{ $assignmentRequest->case->title }}</small></td>
             <td>{{ $assignmentRequest->case->client->name }}</td>
             <td>{{ $assignmentRequest->case->practiceArea?->name ?? '—' }}</td>
             <td>{{ $assignmentRequest->lawyer->name }}</td>

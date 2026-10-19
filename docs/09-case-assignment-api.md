@@ -45,9 +45,31 @@ status: "pending" (abhi bhi), assignment_request: { status: "pending", lawyer: {
 
 ---
 
-## 2. `GET /cases/{case}/lawyers` - Lawyer list (sirf Client, case ka owner)
+## 2. `GET /lawyers` - General Lawyer directory (sirf Client)
 
-"Assign a Lawyer" screen khulte hi yeh call karo.
+Yeh **case se bilkul alag/independent** endpoint hai - app ke "Lawyers" tab (bottom nav) ke liye, jahan client bina kisi case khole bhi sab lawyers browse kar sake. Kisi case ke liye specifically assign karna ho toh section 3 (`GET /cases/{case}/lawyers`) use karo - woh case ke practice area se match karta hai, yeh nahi karta.
+
+Query params (dono optional):
+| Param | Kya karta hai |
+|---|---|
+| `q` | Naam se search (partial match) |
+| `practice_area_id` | Sirf us specialization wale lawyers |
+
+```
+GET /api/v1/lawyers?q=sarah&practice_area_id=2
+```
+
+Response `200`: same shape jo section 3 mein hai (neeche dekho) - `UserResource` array, paginated, 20 per page.
+
+- List sirf un lawyers ki hai jo account se `active` aur admin se `verified` hain - koi filter diye bina **sab verified lawyers** aa jaate hain (case-scoped wale endpoint ke ulat, jahan practice area match zaroori hai).
+- **`rating` / "match %" koi field nahi hai** - mockup mein dikhte hain, backend schema mein nahi (dekho section 8).
+- **Response `403`** - lawyer ka token (yeh tab sirf Client app mein hai).
+
+---
+
+## 3. `GET /cases/{case}/lawyers` - Ek case ke liye matched lawyers (sirf Client, case ka owner)
+
+"Assign a Lawyer" screen khulte hi (ek case ke andar se) yeh call karo - section 2 wale general directory se farak: yahan sirf us case ke practice area wale lawyers aate hain.
 
 Response `200`:
 ```json
@@ -83,7 +105,7 @@ Response `200`:
 
 ---
 
-## 3. `POST /cases/{case}/assignment-requests` - Lawyer assign karo
+## 4. `POST /cases/{case}/assignment-requests` - Lawyer assign karo
 
 Body:
 ```json
@@ -106,7 +128,7 @@ Response `201`:
 }
 ```
 
-**Yeh call case ko turant lawyer ko assign *nahi* karta** - sirf ek request banata hai jo admin ke dashboard mein "Pending Review" mein dikhegi. Isi response ka `data` object hi tumhe `GET /cases/{id}` ke `assignment_request` field mein bhi milega (section 4 dekho) - UI isi se current state dikha sakti hai.
+**Yeh call case ko turant lawyer ko assign *nahi* karta** - sirf ek request banata hai jo admin ke dashboard mein "Pending Review" mein dikhegi. Isi response ka `data` object hi tumhe `GET /cases/{id}` ke `assignment_request` field mein bhi milega (section 5 dekho) - UI isi se current state dikha sakti hai.
 
 **Response `422`** (`message` seedha dikhane layak hai):
 | Message | Kab |
@@ -123,13 +145,14 @@ Response `201`:
 
 ---
 
-## 4. `GET /cases/{case}` aur `GET /cases` - naya `assignment_request` field
+## 5. `GET /cases/{case}` aur `GET /cases` - naye `assignment_request` aur `case_number` fields
 
-`CaseResource` (dono list aur detail endpoint) ab ek naya field deta hai:
+`CaseResource` (dono list aur detail endpoint) ab do naye fields deta hai - `case_number` (har case ka human-readable unique ID, jaise `CASE-1042` - UI mein raw `id` ke bajaye hamesha yehi dikhao) aur `assignment_request`:
 
 ```json
 {
   "id": 42,
+  "case_number": "CASE-1042",
   "title": "Wrongful termination",
   "practice_area": { "id": 3, "name": "Employment Law" },
   "status": "assigned",
@@ -157,7 +180,7 @@ Response `201`:
 
 ---
 
-## 5. Lawyer ka accept/reject - ek guard change
+## 6. Lawyer ka accept/reject - ek guard change
 
 `04-realtime-chat.md` mein documented `POST /cases/{case}/accept` aur `/reject` **bilkul same tarah kaam karte hain**, bas ab yeh `case.status === "assigned"` par chalte hain (pehle `"pending"` par chalte the, jab `advocate_id` seedha case-creation call mein bhejte the - woh purana flow ab exist nahi karta, upar section 1 ka flow hi sahi hai).
 
@@ -165,18 +188,18 @@ Agar koi case abhi bhi plain `"pending"` hai (koi admin-approved advocate nahi),
 
 ---
 
-## 6. Common errors
+## 7. Common errors
 
 | Status | Kab |
 |---|---|
 | `401` | Login nahi hai |
-| `403` | Case tumhara nahi (lawyers list / assignment-request), ya role allow nahi karta |
+| `403` | Case tumhara nahi (lawyers list / assignment-request), lawyer ne `/lawyers` directory kholne ki koshish ki, ya role allow nahi karta |
 | `404` | Case ya lawyer exist nahi karta |
-| `422` | Upar section 3 ki table, ya case draft hai |
+| `422` | Upar section 4 ki table, ya case draft hai |
 
 ---
 
-## 7. Kya jaan-bujh kar chhoda gaya (abhi)
+## 8. Kya jaan-bujh kar chhoda gaya (abhi)
 
 - **`rating` / "match %"** - koi aisa field schema mein hai hi nahi, UI mockup mein dikha tha lekin backend se nahi aata.
 - **Timeout/auto-expire** - admin agar lambe time tak pending request decide na kare, koi automatic expiry/escalation nahi hai.

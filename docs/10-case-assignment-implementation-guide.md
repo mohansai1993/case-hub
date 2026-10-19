@@ -4,21 +4,32 @@
 
 Case draft/submit flow (`08-case-intake-api.md`) aur chat (`04-realtime-chat.md`) pehle se document hain - yeh guide un dono ke **beech** mein aata hai: submit hone ke baad lawyer assign karna, aur lawyer side se accept/reject karna.
 
+> **Case ID dikhane ka rule:** har jagah (list cards, detail screen, headers) `case_number` field use karo (jaise `CASE-1042`) - raw `id` kabhi UI mein mat dikhana, woh sirf API calls ke URL mein jaata hai.
+
 ---
 
 ## 1. Kaunse screens banane hain
 
 | # | App | Screen | Kab khulta hai |
 |---|---|---|---|
-| 1 | Client | **Assign a Lawyer** (list) | Case submit hone ke baad, case detail se "Assign a Lawyer" button tap karne par (sirf jab tak `advocate_id` set nahi hua) |
-| 2 | Client | **Case Detail - awaiting / assigned states** | Har case detail screen mein hi - naya state handling, alag screen nahi |
-| 3 | Lawyer | **My Cases - New / In Progress tabs** | Lawyer app ka home/cases tab |
-| 4 | Lawyer | **Case Detail (New)** | "New" tab se case tap karne par - Accept / Decline buttons |
-| 5 | Lawyer | **Accept / Decline confirmation** | Accept ya Decline tap karne par |
+| 1 | Client | **Lawyers tab** (general directory, bottom nav) | App ke bottom nav se, kisi bhi waqt - sab verified lawyers browse/search karne ke liye, koi case select kiye bina |
+| 2 | Client | **Assign a Lawyer** (case-scoped list) | Case submit hone ke baad, case detail se "Assign a Lawyer" button tap karne par (sirf jab tak `advocate_id` set nahi hua) |
+| 3 | Client | **Case Detail - awaiting / assigned states** | Har case detail screen mein hi - naya state handling, alag screen nahi |
+| 4 | Lawyer | **My Cases - New / In Progress tabs** | Lawyer app ka home/cases tab |
+| 5 | Lawyer | **Case Detail (New)** | "New" tab se case tap karne par - Accept / Decline buttons |
+| 6 | Lawyer | **Accept / Decline confirmation** | Accept ya Decline tap karne par |
 
 ---
 
 ## 2. Client side - "Assign a Lawyer" flow
+
+### 2.0 Lawyers tab (general directory - koi case involved nahi)
+
+Bottom nav ka "Lawyers" tab `GET /lawyers` call karta hai (`09-case-assignment-api.md` section 2) - **isme koi case ID nahi lagta**, bas sab verified lawyers aate hain. Search box top par ho toh `?q=` query param use karo; specialization filter chips/dropdown ho toh `?practice_area_id=`.
+
+Yeh screen sirf **browse/discover** ke liye hai - "View Details" se lawyer ka profile dikhao (`lawyer.bio`, `lawyer.years_of_experience`, `lawyer.practice_areas`), lekin yahan se seedha "assign" mat karne do, kyunki assign karne ke liye ek case chahiye hota hai. Agar iss screen se bhi assign karne ka button chahiye, pehle "Select a case" picker dikhao (client ke pending cases mein se), phir section 2.2 wala hi `POST /cases/{id}/assignment-requests` call karo.
+
+**`rating` / "match %" mat dikhana** - yeh field backend se aata hi nahi (mockup mein tha, API mein nahi).
 
 ### 2.1 Case detail screen - button kab dikhana hai
 
@@ -31,16 +42,16 @@ Case draft/submit flow (`08-case-intake-api.md`) aur chat (`04-realtime-chat.md`
 | `pending` | `{ status: "rejected", reason }` | "Request rejected" banner with `reason`, **"Pick another Lawyer"** button phir se list screen khol de |
 | `assigned` | `{ status: "approved" }` | "Waiting for {lawyer.name} to accept" - koi button nahi, bas status |
 | `accepted` | `{ status: "approved" }` | Normal case screen + **Chat** tab/button khul jaata hai (`04-realtime-chat.md`) |
-| `rejected` | `{ status: "approved" }` | Lawyer ne khud decline kar diya - "This lawyer declined your case" banner. **Koi dobara-assign API nahi hai** is state ke liye abhi (section 6 dekho) |
+| `rejected` | `{ status: "approved" }` | Lawyer ne khud decline kar diya - "This lawyer declined your case" banner. **Koi dobara-assign API nahi hai** is state ke liye abhi (section 7 dekho) |
 
 ### 2.2 Lawyer list screen
 
 1. `GET /cases/{id}/lawyers` call karo - card per lawyer: naam, photo (`image_url`), specialization chips (`lawyer.practice_areas`), experience (`lawyer.years_of_experience`), "Verified" badge (hamesha true hoga, list khud sirf verified lawyers deti hai).
-2. **Koi rating ya "match %" mat dikhana** - woh field backend se aata hi nahi (mockup mein tha, API mein nahi - section 6 dekho).
+2. **Koi rating ya "match %" mat dikhana** - woh field backend se aata hi nahi (mockup mein tha, API mein nahi - section 7 dekho).
 3. Khali list: "No lawyers available for this practice area yet" empty state.
 4. Card tap / "Select" button -> confirmation dialog ("Assign Adv. {name} to this case? This will be sent to our team for review.") -> confirm par `POST /cases/{id}/assignment-requests { lawyer_id }`.
 5. Success (`201`) -> list screen band karo, case detail screen par wapas jao, "Awaiting admin review" state dikhao (upar table row 2).
-6. `422` aaye toh seedha `message` ek toast/dialog mein dikha do - backend ka message already user-friendly hai (`09-case-assignment-api.md` section 3 ki table dekho).
+6. `422` aaye toh seedha `message` ek toast/dialog mein dikha do - backend ka message already user-friendly hai (`09-case-assignment-api.md` section 4 ki table dekho).
 
 ---
 
@@ -86,7 +97,7 @@ Do buttons: **Accept** aur **Decline**.
 ## 5. Integration order (suggested build sequence)
 
 1. Case detail screen mein naya `assignment_request`-based state table wire karo (section 2.1) - isse pehle poora feature test hi nahi ho sakta.
-2. Lawyer list screen + assign call (section 2.2).
+2. Lawyer list screen + assign call (section 2.2). "Lawyers" tab (section 2.0) iske baad ya pehle, koi dependency nahi hai - standalone hai.
 3. Lawyer app: New/In Progress tab split (section 3.1) - purane "single list" UI se yeh chhota change hai agar `GET /cases` pehle se use ho raha hai.
 4. Lawyer app: Case detail + Accept/Decline (section 3.2).
 5. Accept ke baad Chat screen ka naya entry point (agar pehle se chat ban chuki hai, bas navigation wire karo).
@@ -96,6 +107,7 @@ Do buttons: **Accept** aur **Decline**.
 
 ## 6. QA checklist (launch se pehle test karo)
 
+- [ ] "Lawyers" tab sab verified lawyers dikhata hai (koi case select kiye bina), search aur specialization filter dono kaam karte hain.
 - [ ] Case submit karo, koi assignment request na banao -> "Assign a Lawyer" button dikhta hai.
 - [ ] Lawyer list sirf us practice area ke verified lawyers dikhati hai - koi unverified/suspended lawyer list mein nahi aana chahiye.
 - [ ] Lawyer select karo -> "Awaiting admin review" state dikhta hai, dobara assign karne ka button nahi dikhna chahiye.
@@ -111,7 +123,7 @@ Do buttons: **Accept** aur **Decline**.
 
 ## 7. Kya jaan-bujh kar chhoda gaya (abhi)
 
-Yeh poora `09-case-assignment-api.md` section 7 wahi hai jo backend mein nahi hai - sabse zaroori UI-impacting points yahan dobara:
+Yeh poora `09-case-assignment-api.md` section 8 wahi hai jo backend mein nahi hai - sabse zaroori UI-impacting points yahan dobara:
 
 - **`rating` / "match %"** cards par mat dikhana - field hi nahi hai.
 - **Lawyer jab khud reject kar de** (`case.status === "rejected"` lawyer-accept ke baad), client ke liye koi "dobara assign karo" flow abhi nahi bana - agar product chahta hai, naya backend endpoint lagega (abhi sirf admin-rejection ke baad hi re-pick allowed hai).

@@ -41,11 +41,12 @@ class CaseChatTest extends ApiTestCase
         $this->givePlan($client);
         $area = PracticeArea::create(['slug' => 'labour', 'name' => 'Labour Law', 'is_active' => true]);
 
-        $draft = $this->postJson('/api/v1/cases', ['title' => 'Wrongful termination'], $this->bearer($client))
+        $response = $this->postJson('/api/v1/cases', ['title' => 'Wrongful termination'], $this->bearer($client))
             ->assertCreated()
             ->assertJsonPath('data.is_draft', true)
-            ->assertJsonPath('data.client.id', $client->user_id)
-            ->json('data.id');
+            ->assertJsonPath('data.client.id', $client->user_id);
+        $draft = $response->json('data.id');
+        $response->assertJsonPath('data.case_number', 'CASE-' . ($draft + 1000));
 
         // Invisible until submitted.
         $this->getJson('/api/v1/cases', $this->bearer($client))->assertJsonCount(0, 'data');

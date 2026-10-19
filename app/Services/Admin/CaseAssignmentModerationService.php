@@ -47,6 +47,7 @@ class CaseAssignmentModerationService
 
             $case->update(['advocate_id' => $locked->lawyer_id, 'status' => CaseStatus::Assigned]);
 
+            $locked->setRelation('case', $case);
             $locked->load('lawyer', 'client');
             $locked->lawyer->notify(new LawyerCaseAssigned($case));
             $locked->client->notify(new CaseAssignmentApproved($locked));
@@ -56,7 +57,7 @@ class CaseAssignmentModerationService
 
         $this->alerts->staffActionTaken(
             $by,
-            "approved a lawyer assignment on case #{$result->case_id}.",
+            "approved a lawyer assignment on {$result->case->caseNumber()}.",
             route('admin.case-assignment-request-details', $result->id)
         );
 
@@ -79,7 +80,7 @@ class CaseAssignmentModerationService
                 'decided_at' => now(),
             ])->save();
 
-            $locked->load('client');
+            $locked->load('client', 'case');
             $locked->client->notify(new CaseAssignmentRejected($locked));
 
             return $locked;
@@ -87,7 +88,7 @@ class CaseAssignmentModerationService
 
         $this->alerts->staffActionTaken(
             $by,
-            "rejected a lawyer assignment on case #{$result->case_id}.",
+            "rejected a lawyer assignment on {$result->case->caseNumber()}.",
             route('admin.case-assignment-request-details', $result->id)
         );
 

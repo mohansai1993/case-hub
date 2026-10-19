@@ -80,7 +80,7 @@ class CaseAssignmentModerationTest extends TestCase
 
         $this->asSuper()->get(route('admin.case-assignment-requests'))
             ->assertOk()
-            ->assertSee('Case #' . $request->case_id)
+            ->assertSee($request->case->caseNumber())
             ->assertSee($request->lawyer->name);
 
         $this->asSuper()->get(route('admin.case-assignment-request-details', $request->id))

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\CaseDocumentController;
 use App\Http\Controllers\Api\V1\CaseLawyerController;
 use App\Http\Controllers\Api\V1\CaseMessageController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
+use App\Http\Controllers\Api\V1\LawyerController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\PlanController;
 use App\Http\Controllers\Api\V1\PracticeAreaController;
@@ -72,6 +73,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     // own profile - see docs/06-billing-and-storage.md).
     Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
+        Route::get('lawyers', [LawyerController::class, 'index'])->name('lawyers.index');
 
         Route::post('profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
         Route::get('profile/lawyer', [ProfileController::class, 'showLawyerProfile'])->name('profile.lawyer.show');

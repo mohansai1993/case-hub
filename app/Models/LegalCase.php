@@ -52,6 +52,16 @@ class LegalCase extends Model
         return $this->submitted_at === null;
     }
 
+    /**
+     * Human-readable case reference shown to clients, lawyers and admins
+     * (e.g. "CASE-1001") - derived from the row id, nothing stored. The
+     * +1000 offset just keeps early ids from looking like a 1-digit count.
+     */
+    public function caseNumber(): string
+    {
+        return 'CASE-' . ($this->id + 1000);
+    }
+
     /** No default order: callers pick it (history wants newest-first, other uses don't care). */
     public function messages(): HasMany
     {

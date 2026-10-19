@@ -19,6 +19,7 @@ class CaseResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'case_number' => $this->caseNumber(),
             'title' => $this->title,
             'practice_area' => $this->whenLoaded('practiceArea', fn () => $this->practiceArea ? [
                 'id' => $this->practiceArea->id,

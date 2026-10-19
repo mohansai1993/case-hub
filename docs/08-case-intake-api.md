@@ -52,6 +52,7 @@ Response `201`:
   "message": "Draft case started.",
   "data": {
     "id": 42,
+    "case_number": "CASE-1042",
     "title": "Wrongful termination",
     "practice_area": { "id": 3, "name": "Labour Law" },
     "description": "Terminated without notice after 3 years of service.",
@@ -151,9 +152,10 @@ App agar screen se explicitly back/cancel detect kare, `DELETE` call karna best 
 
 | Field | Note |
 |---|---|
+| `case_number` | Human-readable unique ID (jaise `CASE-1042`) - row ke DB `id` se derive hota hai (`LegalCase::caseNumber()`), DB mein alag se stored nahi hai. Client/Lawyer/Admin, sabko yehi dikhao - raw `id` UI mein mat dikhana. |
 | `practice_area_id` | Wahi `practice_areas` table jo lawyer specialization ke liye use hoti hai (`03-mobile-api.md` ke registration mein dekha hoga) - case ka "legal issue" usi list se aata hai. |
-| `advocate_id` | **Client ye kabhi nahi bhejta.** Submit hone ke baad case admin ke paas Pending baitha rehta hai, `advocate_id = null`. Admin kis lawyer ko assign karega - wo endpoint abhi bana nahi hai, alag se banega. Jab tak assign nahi hota, case kisi lawyer ko dikhta nahi aur chat shuru nahi ho sakta. |
-| `status` | Abhi bhi `pending` / `accepted` / `rejected` / `closed` - assign hone ke baad hi `accept`/`reject` (`04-realtime-chat.md`) relevant hote hain. |
+| `advocate_id` | **Client ye kabhi nahi bhejta.** Submit hone ke baad case admin ke paas Pending baitha rehta hai, `advocate_id = null`. Client khud lawyer pick karta hai, admin approve karta hai - poora flow `09-case-assignment-api.md` mein hai. Jab tak assign nahi hota, case kisi lawyer ko dikhta nahi aur chat shuru nahi ho sakta. |
+| `status` | `pending` / `assigned` / `accepted` / `rejected` / `closed` - `09-case-assignment-api.md` mein poora state machine hai. |
 
 ---
 
