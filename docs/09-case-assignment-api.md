@@ -65,6 +65,47 @@ Response `200`: same shape jo section 3 mein hai (neeche dekho) - `UserResource`
 - **`rating` / "match %" koi field nahi hai** - mockup mein dikhte hain, backend schema mein nahi (dekho section 8).
 - **Response `403`** - lawyer ka token (yeh tab sirf Client app mein hai).
 
+### 2.1 `GET /lawyers/{id}` - Lawyer Profile / "View Details" (sirf Client)
+
+List card ya case-assignment ke "View Details" tap karne par yeh call karo.
+
+```
+GET /api/v1/lawyers/d1fdf080-fd81-4b7b-87d6-bfeeb2384858
+```
+
+Response `200`:
+```json
+{
+  "data": {
+    "id": "d1fdf080-fd81-4b7b-87d6-bfeeb2384858",
+    "type": "lawyer",
+    "name": "Adv. John Smith",
+    "email": "john@lawfirm.com",
+    "mobile": "9876543210",
+    "image_url": null,
+    "email_verified": true,
+    "status": "active",
+    "lawyer": {
+      "location": "Pune, India",
+      "years_of_experience": 12,
+      "bio": "Senior legal counsel specializing in corporate governance, employment litigation, and contract enforcement.",
+      "verification_status": "verified",
+      "practice_areas": [
+        { "id": 2, "name": "Employment Contracts" },
+        { "id": 5, "name": "Workplace Grievance" }
+      ],
+      "completed_cases": 200
+    }
+  }
+}
+```
+
+- `lawyer.completed_cases` = is lawyer ke naam kitne cases `closed` status tak pahunche hain - list endpoint (section 2) mein yeh field **nahi** hai, sirf detail/profile screen ke liye hai (har list-item ke liye alag count query chalana costly hota).
+- **`rating` / "4.8 (124 reviews)" aur firm/company ka naam** - dono mockup mein dikhte hain, **koi bhi field schema mein hai hi nahi** - koi reviews/ratings table nahi hai, `LawyerProfile` mein firm-name wala column nahi hai. Yeh fabricate nahi kiya gaya - jab tak yeh feature real mein banaye (naya table + review-collection flow), UI mein mat dikhana.
+- "ACTIVE COUNSEL" jaisa badge koi alag field nahi hai - top-level `status: "active"` se hi derive karo.
+- **Response `404`** - lawyer exist nahi karta, lawyer ka account type nahi hai (client ka id diya), ya lawyer abhi `active`+`verified` nahi hai (list mein bhi nahi dikhega - same visibility rule, taaki suspended/unverified lawyer ka profile URL guess karke na khul jaaye).
+- **Response `403`** - caller khud lawyer hai (yeh endpoint sirf Client app ke liye hai).
+
 ---
 
 ## 3. `GET /cases/{case}/lawyers` - Ek case ke liye matched lawyers (sirf Client, case ka owner)

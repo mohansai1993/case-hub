@@ -27,7 +27,9 @@ Case draft/submit flow (`08-case-intake-api.md`) aur chat (`04-realtime-chat.md`
 
 Bottom nav ka "Lawyers" tab `GET /lawyers` call karta hai (`09-case-assignment-api.md` section 2) - **isme koi case ID nahi lagta**, bas sab verified lawyers aate hain. Search box top par ho toh `?q=` query param use karo; specialization filter chips/dropdown ho toh `?practice_area_id=`.
 
-Yeh screen sirf **browse/discover** ke liye hai - "View Details" se lawyer ka profile dikhao (`lawyer.bio`, `lawyer.years_of_experience`, `lawyer.practice_areas`), lekin yahan se seedha "assign" mat karne do, kyunki assign karne ke liye ek case chahiye hota hai. Agar iss screen se bhi assign karne ka button chahiye, pehle "Select a case" picker dikhao (client ke pending cases mein se), phir section 2.2 wala hi `POST /cases/{id}/assignment-requests` call karo.
+Yeh screen sirf **browse/discover** ke liye hai - lekin yahan se seedha "assign" mat karne do, kyunki assign karne ke liye ek case chahiye hota hai. Agar iss screen se bhi assign karne ka button chahiye, pehle "Select a case" picker dikhao (client ke pending cases mein se), phir section 2.2 wala hi `POST /cases/{id}/assignment-requests` call karo.
+
+**"View Details" tap karne par** `GET /lawyers/{id}` call karo (`09-case-assignment-api.md` section 2.1) - full profile screen: bio, experience, specialization chips, `completed_cases` count. **Koi rating/reviews ya firm-name mat dikhana** - field hi nahi hai (section 7 dekho). `404` aaye toh "This lawyer is no longer available" dikha ke list par wapas bhej do (suspended/unverified ho sakta hai).
 
 **`rating` / "match %" mat dikhana** - yeh field backend se aata hi nahi (mockup mein tha, API mein nahi).
 
