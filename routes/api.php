@@ -115,6 +115,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
 
             Route::get('{case}/messages', [CaseMessageController::class, 'index'])->name('messages.index');
             Route::post('{case}/messages', [CaseMessageController::class, 'store'])->name('messages.store');
+            Route::post('{case}/messages/delivered', [CaseMessageController::class, 'delivered'])->name('messages.delivered');
             Route::post('{case}/messages/read', [CaseMessageController::class, 'markRead'])->name('messages.read');
 
             Route::get('{case}/documents', [CaseDocumentController::class, 'index'])->name('documents.index');

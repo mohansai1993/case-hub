@@ -4,6 +4,8 @@ namespace Tests\Feature\Api;
 
 use App\Enums\CaseStatus;
 use App\Events\MessageSent;
+use App\Events\MessagesDelivered;
+use App\Events\MessagesRead;
 use App\Models\LegalCase;
 use App\Models\Plan;
 use App\Models\PracticeArea;
@@ -211,7 +213,7 @@ class CaseChatTest extends ApiTestCase
             ->assertCreated()
             ->assertJsonPath('data.body', 'When is the hearing?')
             ->assertJsonPath('data.is_mine', true)
-            ->assertJsonPath('data.read', false);
+            ->assertJsonPath('data.status', 'sent');
 
         $this->assertDatabaseHas('case_messages', [
             'case_id' => $case->id,
@@ -268,6 +270,81 @@ class CaseChatTest extends ApiTestCase
 
         $this->assertNotNull($case->messages()->where('sender_id', $client->user_id)->first()->read_at);
         $this->assertNull($case->messages()->where('sender_id', $advocate->user_id)->first()->read_at);
+    }
+
+    // ---- Delivery / read ticks (sent -> delivered -> read) ---------------------------
+
+    public function test_a_message_starts_as_sent_then_moves_to_delivered_then_read(): void
+    {
+        $client = User::factory()->create();
+        $advocate = User::factory()->lawyer()->create();
+        $case = $this->openCase($client, $advocate);
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages", ['body' => 'Hello'], $this->bearer($client))
+            ->assertCreated()->assertJsonPath('data.status', 'sent');
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages/delivered", [], $this->bearer($advocate))->assertOk();
+        $this->getJson("/api/v1/cases/{$case->id}/messages", $this->bearer($client))
+            ->assertJsonPath('data.0.status', 'delivered');
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages/read", [], $this->bearer($advocate))->assertOk();
+        $this->app['auth']->forgetGuards();
+        $this->getJson("/api/v1/cases/{$case->id}/messages", $this->bearer($client))
+            ->assertJsonPath('data.0.status', 'read');
+    }
+
+    public function test_delivered_only_affects_the_other_partys_messages_and_broadcasts_once(): void
+    {
+        Event::fake([MessagesDelivered::class]);
+
+        $client = User::factory()->create();
+        $advocate = User::factory()->lawyer()->create();
+        $case = $this->openCase($client, $advocate);
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages", ['body' => 'From client'], $this->bearer($client));
+        $this->app['auth']->forgetGuards();
+        $this->postJson("/api/v1/cases/{$case->id}/messages", ['body' => 'From advocate'], $this->bearer($advocate));
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages/delivered", [], $this->bearer($advocate))->assertOk();
+
+        $this->assertNotNull($case->messages()->where('sender_id', $client->user_id)->first()->delivered_at);
+        $this->assertNull($case->messages()->where('sender_id', $advocate->user_id)->first()->delivered_at);
+        Event::assertDispatched(MessagesDelivered::class, fn ($event) => $event->caseId === $case->id && $event->deliveredBy === $advocate->user_id);
+    }
+
+    public function test_delivered_is_a_no_op_and_broadcasts_nothing_when_nothing_is_pending(): void
+    {
+        Event::fake([MessagesDelivered::class]);
+
+        $client = User::factory()->create();
+        $advocate = User::factory()->lawyer()->create();
+        $case = $this->openCase($client, $advocate);
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages/delivered", [], $this->bearer($advocate))->assertOk();
+
+        Event::assertNotDispatched(MessagesDelivered::class);
+    }
+
+    public function test_marking_read_backfills_delivered_and_broadcasts_both_states(): void
+    {
+        Event::fake([MessagesRead::class]);
+
+        $client = User::factory()->create();
+        $advocate = User::factory()->lawyer()->create();
+        $case = $this->openCase($client, $advocate);
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages", ['body' => 'Hello'], $this->bearer($client));
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson("/api/v1/cases/{$case->id}/messages/read", [], $this->bearer($advocate))->assertOk();
+
+        $message = $case->messages()->where('sender_id', $client->user_id)->first();
+        $this->assertNotNull($message->read_at);
+        $this->assertNotNull($message->delivered_at);
+        Event::assertDispatched(MessagesRead::class, fn ($event) => $event->caseId === $case->id && $event->readBy === $advocate->user_id);
     }
 
     public function test_case_list_reports_unread_count_per_viewer(): void

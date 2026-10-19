@@ -17,7 +17,11 @@ class CaseMessageResource extends JsonResource
             'sender_id' => $this->sender_id,
             'is_mine' => $this->sender_id === $request->user('sanctum')?->user_id,
             'body' => $this->body,
-            'read' => $this->read_at !== null,
+            'status' => match (true) {
+                $this->read_at !== null => 'read',
+                $this->delivered_at !== null => 'delivered',
+                default => 'sent',
+            },
             'created_at' => $this->created_at->toIso8601String(),
         ];
     }

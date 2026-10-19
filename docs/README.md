@@ -14,6 +14,7 @@ Yeh folder batata hai ki ab tak project mein kya-kya bana hai, kaise kaam karta 
 | [08-case-intake-api.md](08-case-intake-api.md) | "Create Case" screen: draft start karna, evidence upload (har file alag), submit karna, aur abandoned drafts ka automatic cleanup |
 | [09-case-assignment-api.md](09-case-assignment-api.md) | Case-to-lawyer assignment: Client lawyer browse/pick kare, admin approve/reject kare, phir Lawyer accept/reject kare - poora flow aur JSON |
 | [10-case-assignment-implementation-guide.md](10-case-assignment-implementation-guide.md) | Case-assignment **frontend implementation guide** - Client aur Lawyer dono app ke liye kaunse screens banane hain, state tables, aur QA checklist |
+| [11-chat-read-receipts-implementation-guide.md](11-chat-read-receipts-implementation-guide.md) | WhatsApp jaisa Sent/Delivered/Seen tick system ke build-notes - live API contract ab `04-realtime-chat.md` mein hai |
 
 ## Sabse pehle (setup)
 

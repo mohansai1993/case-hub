@@ -74,7 +74,7 @@ Zyadatar Pusher-compatible client libraries ye call **khud** kar dete hain jab t
 **Subscribe karo:**
 ```
 channel = "case.{caseId}"   // library "private-" prefix khud laga degi
-event   = "message.sent"
+events  = "message.sent", "messages.delivered", "messages.read"
 ```
 
 **Event payload jo milega** (`message.sent`):
@@ -87,6 +87,15 @@ event   = "message.sent"
   "created_at": "2026-09-28T12:05:00+00:00"
 }
 ```
+
+**`messages.delivered`** aur **`messages.read`** (WhatsApp-style ticks - grey/grey-grey/blue, poora detail section 4.5-4.6 mein hai):
+```json
+{ "delivered_by": "448dc022-5370-43e7-bc16-a60c8a77427e", "delivered_at": "2026-10-21T12:05:30+00:00" }
+```
+```json
+{ "read_by": "448dc022-5370-43e7-bc16-a60c8a77427e", "read_at": "2026-10-21T12:06:10+00:00" }
+```
+In dono events ka payload chhota rakha gaya hai - poori message-id list nahi hai, bas kisne aur kab. Apne khud ke bheje (`is_mine: true`) messages mein se jinka `created_at <= delivered_at`/`read_at` hai, unka tick status wahi UI update kar do - koi dobara REST call karne ki zaroorat nahi.
 
 **Apna hi message wapas na dikhe, iske liye:** WS connect hone par library ek `socket_id` deti hai. Wahi `socket_id` `POST /cases/{case}/messages` call mein header `X-Socket-ID` se bhejo - Reverb tumhare apne connection ko wapas broadcast nahi karega (`toOthers()`). Agar header nahi bhejoge to koi crash nahi hoga, bas apna message tumhe REST response se **aur** WebSocket se dono jagah se milega (duplicate - message id se de-dupe kar lena).
 
@@ -105,7 +114,8 @@ Sab `auth:sanctum` + `api.active` ke peeche hain (login ke baad).
 | 5 | POST | `/cases/{case}/reject` | Advocate case reject kare |
 | 6 | GET | `/cases/{case}/messages` | Message history (paginated, naye pehle) |
 | 7 | POST | `/cases/{case}/messages` | Message bhejo |
-| 8 | POST | `/cases/{case}/messages/read` | Dusre party ke saare unread messages ko read mark karo |
+| 8 | POST | `/cases/{case}/messages/delivered` | "Main online hoon" ack - dusre party ke saare undelivered messages ko deliver mark karo (grey -> double-grey tick) |
+| 9 | POST | `/cases/{case}/messages/read` | Chat khuli/focus hui - dusre party ke unread messages ko read mark karo (double-grey -> double-blue tick) |
 
 ### 4.1 `POST /cases` - Case kholo
 
@@ -151,12 +161,14 @@ Response `200` (naye message pehle, standard pagination):
 ```json
 {
   "data": [
-    { "id": 102, "case_id": 42, "sender_id": "...", "is_mine": true, "body": "Sure, 10am works.", "read": false, "created_at": "..." },
-    { "id": 101, "case_id": 42, "sender_id": "...", "is_mine": false, "body": "When is the hearing?", "read": true, "created_at": "..." }
+    { "id": 102, "case_id": 42, "sender_id": "...", "is_mine": true, "body": "Sure, 10am works.", "status": "sent", "created_at": "..." },
+    { "id": 101, "case_id": 42, "sender_id": "...", "is_mine": false, "body": "When is the hearing?", "status": "read", "created_at": "..." }
   ]
 }
 ```
 `is_mine` current logged-in user ke hisaab se hai (frontend ko khud sender_id compare nahi karna padta).
+
+`status` teen values le sakta hai - `"sent"` (1 grey tick), `"delivered"` (2 grey tick), `"read"` (2 blue tick). **Ticks sirf apne `is_mine: true` messages par dikhao** - doosri party ke message par tick ka koi matlab nahi hai. `GET /messages` khud koi status change nahi karta, sirf current state dikhata hai - delivered/read sirf section 4.5 aur 4.6 wale calls se set hote hain.
 
 ### 4.4 `POST /cases/{case}/messages` - Bhejo
 
@@ -170,13 +182,21 @@ Response `201`: wahi shape jo history mein ek message ki hoti hai.
 
 Ye call: (a) DB mein save karta hai, (b) Reverb par turant broadcast karta hai, (c) dusre party ko push notification bhejta hai (queued).
 
-### 4.5 `POST /cases/{case}/messages/read`
+### 4.5 `POST /cases/{case}/messages/delivered` - "Main online hoon" ack
 
-Body nahi chahiye. Sirf **dusre party ke** unread messages ko read mark karta hai (apne khud ke bheje hue messages affect nahi hote).
+Body nahi chahiye. **Jaise hi WebSocket connect ho** (chat screen khuli ho ya na ho - bas app foreground mein aaye/socket judhe), yeh call karo. Sirf **dusre party ke** undelivered messages ko deliver mark karta hai.
+
+Response `200`: `{ "message": "Marked as delivered." }`
+
+Kam se kam ek message deliver hua ho tabhi `messages.delivered` WebSocket event doosri party ko broadcast hota hai (kuch bhi pending na ho toh koi event nahi jaata, noise nahi hota). **Idempotent hai** - baar baar call karne mein koi harm nahi, reconnect/foreground hone par dobara call karna best practice hai.
+
+### 4.6 `POST /cases/{case}/messages/read`
+
+Body nahi chahiye. Chat screen actually khulne/focus hone par call karo. **Dusre party ke** unread messages ko read mark karta hai (apne khud ke bheje hue messages affect nahi hote) - aur saath mein `delivered_at` bhi backfill kar deta hai (agar kisi wajah se delivered-ack miss ho gaya tha, read hamesha delivered implicitly bhi hota hai).
 
 Response `200`: `{ "message": "Marked as read." }`
 
-### 4.6 Common errors
+### 4.7 Common errors
 
 | Status | Kab |
 |---|---|
@@ -189,9 +209,8 @@ Response `200`: `{ "message": "Marked as read." }`
 
 ## 5. Kya jaan-bujh kar chhoda gaya (abhi)
 
-- Case ka poora lifecycle (documents, description, location/date, status-history table jaisa `account_actions`) - sirf ek minimal `cases` table hai (client, advocate, title, status) taaki chat attach ho sake.
-- Lawyer browse/search karne ki app-side API (client ko pata hona chahiye kis `advocate_id` se case kholna hai - abhi koi "find a lawyer" endpoint nahi hai).
-- Typing indicators / online-presence (Reverb presence channels se ban sakta hai, abhi nahi banaya).
+- Typing indicators / online-presence (Reverb presence channels se ban sakta hai, abhi nahi banaya) - "delivered" tick isse alag hai (section 4.5), woh ek simple ack call hai, presence channel nahi.
+- Multiple devices par alag-alag delivered/read status (ek hi account ke 2 phone) - jo bhi device pehle ack kare wahi mark ho jaata hai.
 - Message edit/delete, attachments/files in chat.
 - Admin panel se chat dekhna/moderate karna.
 

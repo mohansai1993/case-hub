@@ -12,7 +12,7 @@ class CaseMessage extends Model
 
     protected function casts(): array
     {
-        return ['read_at' => 'datetime'];
+        return ['delivered_at' => 'datetime', 'read_at' => 'datetime'];
     }
 
     public function case(): BelongsTo
@@ -28,5 +28,10 @@ class CaseMessage extends Model
     public function scopeUnread(Builder $query): Builder
     {
         return $query->whereNull('read_at');
+    }
+
+    public function scopeUndelivered(Builder $query): Builder
+    {
+        return $query->whereNull('delivered_at');
     }
 }
