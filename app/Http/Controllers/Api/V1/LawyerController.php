@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Enums\UserStatus;
 use App\Enums\VerificationStatus;
 use App\Http\Controllers\Controller;
+use App\Http\Resources\LawyerDetailResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -35,5 +36,21 @@ class LawyerController extends Controller
             ->paginate(self::PER_PAGE);
 
         return response()->json(['data' => UserResource::collection($lawyers)]);
+    }
+
+    /** "View Details" screen - same visibility rules as the list (active + verified only). */
+    public function show(Request $request, User $lawyer): JsonResponse
+    {
+        abort_unless($request->user('sanctum')->isClient(), 403);
+
+        $isVisible = $lawyer->isLawyer()
+            && $lawyer->status === UserStatus::Active
+            && $lawyer->lawyerProfile?->verification_status === VerificationStatus::Verified;
+
+        abort_unless($isVisible, 404);
+
+        $lawyer->load('lawyerProfile', 'practiceAreas');
+
+        return response()->json(['data' => new LawyerDetailResource($lawyer)]);
     }
 }

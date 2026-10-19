@@ -74,6 +74,7 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
     Route::middleware(['auth:sanctum', 'api.active', 'throttle:api'])->group(function () {
         Route::get('plans', [PlanController::class, 'index'])->name('plans.index');
         Route::get('lawyers', [LawyerController::class, 'index'])->name('lawyers.index');
+        Route::get('lawyers/{lawyer}', [LawyerController::class, 'show'])->name('lawyers.show');
 
         Route::post('profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo');
         Route::get('profile/lawyer', [ProfileController::class, 'showLawyerProfile'])->name('profile.lawyer.show');

@@ -112,7 +112,7 @@ Sab `auth:sanctum` + `api.active` ke peeche hain (login ke baad).
 | 3 | GET | `/cases/{case}` | Ek case ki detail |
 | 4 | POST | `/cases/{case}/accept` | Advocate case accept kare |
 | 5 | POST | `/cases/{case}/reject` | Advocate case reject kare |
-| 6 | GET | `/cases/{case}/messages` | Message history (paginated, naye pehle) |
+| 6 | GET | `/cases/{case}/messages` | Message history (paginated - page 1 sabse naya conversation, lekin har page ke andar oldest-first) |
 | 7 | POST | `/cases/{case}/messages` | Message bhejo |
 | 8 | POST | `/cases/{case}/messages/delivered` | "Main online hoon" ack - dusre party ke saare undelivered messages ko deliver mark karo (grey -> double-grey tick) |
 | 9 | POST | `/cases/{case}/messages/read` | Chat khuli/focus hui - dusre party ke unread messages ko read mark karo (double-grey -> double-blue tick) |
@@ -157,15 +157,18 @@ Response `200`:
 
 ### 4.3 `GET /cases/{case}/messages` - History
 
-Response `200` (naye message pehle, standard pagination):
+Response `200`:
 ```json
 {
   "data": [
-    { "id": 102, "case_id": 42, "sender_id": "...", "is_mine": true, "body": "Sure, 10am works.", "status": "sent", "created_at": "..." },
-    { "id": 101, "case_id": 42, "sender_id": "...", "is_mine": false, "body": "When is the hearing?", "status": "read", "created_at": "..." }
+    { "id": 101, "case_id": 42, "sender_id": "...", "is_mine": false, "body": "When is the hearing?", "status": "read", "created_at": "..." },
+    { "id": 102, "case_id": 42, "sender_id": "...", "is_mine": true, "body": "Sure, 10am works.", "status": "sent", "created_at": "..." }
   ]
 }
 ```
+
+**Har page ke andar purana message pehle, naya message aakhir mein** (`data` array seedha render karo top-to-bottom - naya message neeche aayega, koi reverse() karne ki zaroorat nahi). Page selection khud **sabse latest** conversation se hoti hai - `?page=1` (default) hamesha sabse naye N messages dega (bas unhi N ke andar oldest-first order mein), `?page=2` usse purane N dega, waisa hi "scroll up to load older" pattern ke liye.
+
 `is_mine` current logged-in user ke hisaab se hai (frontend ko khud sender_id compare nahi karna padta).
 
 `status` teen values le sakta hai - `"sent"` (1 grey tick), `"delivered"` (2 grey tick), `"read"` (2 blue tick). **Ticks sirf apne `is_mine: true` messages par dikhao** - doosri party ke message par tick ka koi matlab nahi hai. `GET /messages` khud koi status change nahi karta, sirf current state dikhata hai - delivered/read sirf section 4.5 aur 4.6 wale calls se set hote hain.
