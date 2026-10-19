@@ -23,6 +23,12 @@
           Lawyers
         </a>
         @endif
+        @if($admin->hasPermission('cases.view'))
+        <a href="{{ route('admin.case-assignment-requests') }}" class="nav-item {{ request()->routeIs('admin.case-assignment-requests', 'admin.case-assignment-request-details') ? 'is-active' : '' }}">
+          <svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          Case Management
+        </a>
+        @endif
         @if($admin->hasPermission('subscriptions.view'))
         <a href="{{ route('admin.subscriptions') }}" class="nav-item {{ request()->routeIs('admin.subscriptions', 'admin.create-plan', 'admin.plans.edit') ? 'is-active' : '' }}">
           <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>

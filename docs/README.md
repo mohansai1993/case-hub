@@ -12,6 +12,8 @@ Yeh folder batata hai ki ab tak project mein kya-kya bana hai, kaise kaam karta 
 | [06-billing-and-storage.md](06-billing-and-storage.md) | Client storage plans: monthly auto-recurring billing, upgrade/downgrade/cancel, grace period, storage quota aur evidence document upload/download |
 | [07-billing-implementation-guide.md](07-billing-implementation-guide.md) | Storage plans **frontend implementation guide** - mobile app ke liye kaunse screens banane hain, flows, state-based UI, aur QA checklist |
 | [08-case-intake-api.md](08-case-intake-api.md) | "Create Case" screen: draft start karna, evidence upload (har file alag), submit karna, aur abandoned drafts ka automatic cleanup |
+| [09-case-assignment-api.md](09-case-assignment-api.md) | Case-to-lawyer assignment: Client lawyer browse/pick kare, admin approve/reject kare, phir Lawyer accept/reject kare - poora flow aur JSON |
+| [10-case-assignment-implementation-guide.md](10-case-assignment-implementation-guide.md) | Case-assignment **frontend implementation guide** - Client aur Lawyer dono app ke liye kaunse screens banane hain, state tables, aur QA checklist |
 
 ## Sabse pehle (setup)
 

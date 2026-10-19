@@ -4,8 +4,10 @@ use App\Http\Controllers\Api\V1\Auth\LoginController;
 use App\Http\Controllers\Api\V1\Auth\OtpController;
 use App\Http\Controllers\Api\V1\Auth\PasswordResetController;
 use App\Http\Controllers\Api\V1\Auth\RegisterController;
+use App\Http\Controllers\Api\V1\CaseAssignmentController;
 use App\Http\Controllers\Api\V1\CaseController;
 use App\Http\Controllers\Api\V1\CaseDocumentController;
+use App\Http\Controllers\Api\V1\CaseLawyerController;
 use App\Http\Controllers\Api\V1\CaseMessageController;
 use App\Http\Controllers\Api\V1\DeviceTokenController;
 use App\Http\Controllers\Api\V1\NotificationController;
@@ -105,6 +107,9 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::delete('{case}', [CaseController::class, 'destroy'])->name('destroy');
             Route::post('{case}/accept', [CaseController::class, 'accept'])->name('accept');
             Route::post('{case}/reject', [CaseController::class, 'reject'])->name('reject');
+
+            Route::get('{case}/lawyers', [CaseLawyerController::class, 'index'])->name('lawyers.index');
+            Route::post('{case}/assignment-requests', [CaseAssignmentController::class, 'store'])->name('assignment-requests.store');
 
             Route::get('{case}/messages', [CaseMessageController::class, 'index'])->name('messages.index');
             Route::post('{case}/messages', [CaseMessageController::class, 'store'])->name('messages.store');

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\AccountActionController;
 use App\Http\Controllers\Admin\AlertController;
+use App\Http\Controllers\Admin\CaseAssignmentRequestController;
 use App\Http\Controllers\Admin\ClientController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\HomeController;
@@ -116,6 +117,16 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
                 ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.approve');
             Route::post('/lawyers/{id}/reject', [AccountActionController::class, 'reject'])
                 ->defaults('type', 'lawyer')->whereUuid('id')->name('lawyers.reject');
+        });
+
+        // Case-to-lawyer assignment requests: a client's pick needs admin review before the lawyer sees it.
+        Route::middleware('permission:cases.view')->group(function () {
+            Route::get('/case-assignment-requests', [CaseAssignmentRequestController::class, 'index'])->name('case-assignment-requests');
+            Route::get('/case-assignment-requests/{caseAssignmentRequest}', [CaseAssignmentRequestController::class, 'show'])->name('case-assignment-request-details');
+        });
+        Route::middleware('permission:cases.update')->group(function () {
+            Route::post('/case-assignment-requests/{caseAssignmentRequest}/approve', [CaseAssignmentRequestController::class, 'approve'])->name('case-assignment-requests.approve');
+            Route::post('/case-assignment-requests/{caseAssignmentRequest}/reject', [CaseAssignmentRequestController::class, 'reject'])->name('case-assignment-requests.reject');
         });
 
         Route::get('/subscriptions', [PlanController::class, 'index'])

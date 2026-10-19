@@ -70,6 +70,20 @@
       text: "They will be able to sign in again.",
       icon: "question",
       confirm: "Yes, activate"
+    },
+    "approve-case-assignment": {
+      title: function (n) { return "Assign " + n + " to this case?"; },
+      text: "The lawyer will see this case in their \"New\" queue and can accept or reject it.",
+      icon: "question",
+      confirm: "Yes, approve"
+    },
+    "reject-case-assignment": {
+      title: function (n) { return "Reject " + n + " for this case?"; },
+      text: "The client will be notified and can pick a different lawyer.",
+      icon: "warning",
+      confirm: "Yes, reject",
+      danger: true,
+      reason: { label: "Reason for rejection", placeholder: "Explain why this lawyer isn't a fit for this case..." }
     }
   };
 

@@ -45,6 +45,13 @@ return [
                 'lawyers.practice_areas' => 'Manage Specializations',
             ],
         ],
+        'cases' => [
+            'label' => 'Case Management',
+            'permissions' => [
+                'cases.view' => 'View Case Assignment Requests',
+                'cases.update' => 'Approve/Reject Case Assignment Requests',
+            ],
+        ],
         'subscriptions' => [
             'label' => 'Subscription Management',
             'permissions' => [
@@ -76,6 +83,7 @@ return [
         'dashboard.view' => 'admin.dashboard',
         'clients.view' => 'admin.clients',
         'lawyers.view' => 'admin.lawyers',
+        'cases.view' => 'admin.case-assignment-requests',
         'subscriptions.view' => 'admin.subscriptions',
         'notifications.view' => 'admin.notifications',
         'settings.view' => 'admin.settings',

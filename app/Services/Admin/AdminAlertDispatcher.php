@@ -4,8 +4,10 @@ namespace App\Services\Admin;
 
 use App\Enums\UserType;
 use App\Models\Admin;
+use App\Models\CaseAssignmentRequest;
 use App\Models\ClientSubscription;
 use App\Models\User;
+use App\Notifications\Admin\CaseAssignmentRequested;
 use App\Notifications\Admin\NewAccountRegistered;
 use App\Notifications\Admin\StaffActionTaken;
 use App\Notifications\Admin\SubscriptionRestricted as SubscriptionRestrictedAlert;
@@ -45,6 +47,11 @@ class AdminAlertDispatcher
     public function subscriptionRestricted(ClientSubscription $subscription): void
     {
         $this->notify('subscriptions.view', new SubscriptionRestrictedAlert($subscription));
+    }
+
+    public function caseAssignmentRequested(CaseAssignmentRequest $request): void
+    {
+        $this->notify('cases.view', new CaseAssignmentRequested($request));
     }
 
     private function notify(string $permission, NotificationClass $notification): void

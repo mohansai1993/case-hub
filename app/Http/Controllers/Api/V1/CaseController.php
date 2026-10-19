@@ -26,7 +26,7 @@ class CaseController extends Controller
         $user = $request->user('sanctum');
 
         $cases = LegalCase::forParticipant($user)->submitted()
-            ->with('client', 'advocate', 'practiceArea')
+            ->with('client', 'advocate', 'practiceArea', 'latestAssignmentRequest.lawyer')
             ->withCount(['messages as unread_count' => fn ($query) => $query
                 ->unread()
                 ->where('sender_id', '!=', $user->user_id)])
@@ -120,7 +120,7 @@ class CaseController extends Controller
         $this->authorizeParticipant($request, $case);
         $user = $request->user('sanctum');
 
-        $case->load('client', 'advocate', 'practiceArea')->loadCount(['messages as unread_count' => fn ($query) => $query
+        $case->load('client', 'advocate', 'practiceArea', 'latestAssignmentRequest.lawyer')->loadCount(['messages as unread_count' => fn ($query) => $query
             ->unread()
             ->where('sender_id', '!=', $user->user_id)]);
 
@@ -132,7 +132,7 @@ class CaseController extends Controller
     {
         $this->authorizeAdvocate($request, $case);
 
-        if ($case->status !== CaseStatus::Pending) {
+        if ($case->status !== CaseStatus::Assigned) {
             return response()->json(['message' => 'This case has already been decided.'], 422);
         }
 
@@ -145,7 +145,7 @@ class CaseController extends Controller
     {
         $this->authorizeAdvocate($request, $case);
 
-        if ($case->status !== CaseStatus::Pending) {
+        if ($case->status !== CaseStatus::Assigned) {
             return response()->json(['message' => 'This case has already been decided.'], 422);
         }
 

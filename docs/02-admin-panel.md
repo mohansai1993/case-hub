@@ -18,6 +18,8 @@ Admin panel browser mein chalta hai (session cookie se). Yeh file batati hai: pa
 | `/admin/lawyers` | Lawyers list | `lawyers.view` |
 | `/admin/lawyers/{id}` | Lawyer details + suspend/activate + **approve/reject** verification (jab tak approve nahi, lawyer app mein login nahi kar sakta) | `lawyers.view`; `lawyers.update` |
 | `/admin/lawyers/practice-areas` | Specialization chips add/rename/activate-deactivate/delete | `lawyers.practice_areas` |
+| `/admin/case-assignment-requests` | Case Management: client ne jo lawyer pick kiya unki list (status se filter - Pending/Approved/Rejected/All) | `cases.view` |
+| `/admin/case-assignment-requests/{id}` | Request detail: case info, requested lawyer, **approve/reject** (approve karne par case us lawyer ko assign ho jata hai; reject karne par client dobara try kar sakta hai - dekho `09-case-assignment-api.md`) | `cases.view`; `cases.update` |
 | `/admin/subscriptions` | Subscription Plans grid + real Client Subscriptions list (search/filter by plan/status, dono dynamic/DB-backed) | `subscriptions.view` |
 | `/admin/plans/create`, `/admin/plans/{plan}/edit` | Plan banao/edit karo: naam, storage (MB ya GB), price, description, popular tag | `subscriptions.manage` |
 | `/admin/notifications` | Notifications: draft banao, clients/lawyers select karke bhejo (in-app + push), sent history | `notifications.view`; `notifications.create` |
@@ -36,7 +38,7 @@ Bina permission ke page kholne par **403**. Login nahi hai toh login page par re
 
 Har admin/staff ke apne alerts hain - Laravel ke standard `notifications` table mein stored (wahi table jo `/admin/notifications` ke in-app sends ke liye bhi use hoti hai, bas `notifiable` yahan Admin hota hai, User nahi).
 
-**Abhi sirf ek trigger wired hai:** naya client ya lawyer register karta hai (`RegistrationService`) -> jin admins ke paas `clients.view` (client ke liye) ya `lawyers.view` (lawyer ke liye) permission hai, unko ek alert milta hai. Super Admin ko hamesha milta hai (uske paas har permission implicitly hoti hai).
+**Do triggers wired hain:** (1) naya client ya lawyer register karta hai (`RegistrationService`) -> jin admins ke paas `clients.view` (client ke liye) ya `lawyers.view` (lawyer ke liye) permission hai, unko ek alert milta hai; (2) client koi lawyer-assignment request submit karta hai (`09-case-assignment-api.md`) -> jin admins ke paas `cases.view` hai, unko alert milta hai. Super Admin ko dono hamesha milte hain (uske paas har permission implicitly hoti hai).
 
 **"Plan leta hai" abhi admin-bell mein wired nahi hai** - client-to-plan subscription feature khud ab ban chuka hai (dekho `docs/06-billing-and-storage.md`), bas `AdminAlertDispatcher` mein ek naya method add karke admin ko "naya subscription" alert bhejna abhi nahi joda gaya.
 

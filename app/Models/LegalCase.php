@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Storage;
 
 /**
@@ -60,6 +61,16 @@ class LegalCase extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(CaseDocument::class, 'case_id');
+    }
+
+    public function assignmentRequests(): HasMany
+    {
+        return $this->hasMany(CaseAssignmentRequest::class, 'case_id')->latest('id');
+    }
+
+    public function latestAssignmentRequest(): HasOne
+    {
+        return $this->hasOne(CaseAssignmentRequest::class, 'case_id')->latestOfMany();
     }
 
     public function isParticipant(User $user): bool

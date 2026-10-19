@@ -31,6 +31,9 @@ class CaseResource extends JsonResource
             'is_draft' => $this->isDraft(),
             'client' => new UserResource($this->whenLoaded('client')),
             'advocate' => new UserResource($this->whenLoaded('advocate')),
+            'assignment_request' => $this->whenLoaded('latestAssignmentRequest', fn () => $this->latestAssignmentRequest
+                ? new CaseAssignmentRequestResource($this->latestAssignmentRequest)
+                : null),
             'unread_count' => (int) ($this->unread_count ?? 0),
             'submitted_at' => $this->submitted_at?->toIso8601String(),
             'created_at' => $this->created_at->toIso8601String(),

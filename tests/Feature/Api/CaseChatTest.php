@@ -136,11 +136,11 @@ class CaseChatTest extends ApiTestCase
 
     // ---- Accept / reject ------------------------------------------------------------
 
-    public function test_advocate_accepts_a_pending_case(): void
+    public function test_advocate_accepts_an_assigned_case(): void
     {
         $client = User::factory()->create();
         $advocate = User::factory()->lawyer()->create();
-        $case = $this->openCase($client, $advocate, 'pending');
+        $case = $this->openCase($client, $advocate, 'assigned');
 
         $this->postJson("/api/v1/cases/{$case->id}/accept", [], $this->bearer($advocate))
             ->assertOk()->assertJsonPath('data.status', 'accepted');
@@ -152,7 +152,7 @@ class CaseChatTest extends ApiTestCase
     {
         $client = User::factory()->create();
         $advocate = User::factory()->lawyer()->create();
-        $case = $this->openCase($client, $advocate, 'pending');
+        $case = $this->openCase($client, $advocate, 'assigned');
 
         $this->postJson("/api/v1/cases/{$case->id}/accept", [], $this->bearer($client))->assertForbidden();
     }
@@ -167,13 +167,31 @@ class CaseChatTest extends ApiTestCase
         $this->postJson("/api/v1/cases/{$case->id}/reject", [], $this->bearer($advocate))->assertStatus(422);
     }
 
+    /** Pending (no admin-approved assignment yet) isn't enough on its own - only Assigned unlocks accept/reject. */
+    public function test_a_plain_pending_case_cannot_be_accepted_or_rejected(): void
+    {
+        $client = User::factory()->create();
+        $advocate = User::factory()->lawyer()->create();
+        $case = LegalCase::create([
+            'client_id' => $client->user_id,
+            'advocate_id' => null,
+            'title' => 'Property dispute',
+            'status' => CaseStatus::Pending,
+            'submitted_at' => now(),
+        ]);
+
+        // No advocate assigned at all, so authorizeAdvocate() 403s first - confirms the state is unreachable either way.
+        $this->postJson("/api/v1/cases/{$case->id}/accept", [], $this->bearer($advocate))->assertForbidden();
+        $this->postJson("/api/v1/cases/{$case->id}/reject", [], $this->bearer($advocate))->assertForbidden();
+    }
+
     // ---- Chat -----------------------------------------------------------------------
 
     public function test_messages_are_blocked_until_the_case_is_accepted(): void
     {
         $client = User::factory()->create();
         $advocate = User::factory()->lawyer()->create();
-        $case = $this->openCase($client, $advocate, 'pending');
+        $case = $this->openCase($client, $advocate, 'assigned');
 
         $this->postJson("/api/v1/cases/{$case->id}/messages", ['body' => 'Hello'], $this->bearer($client))
             ->assertStatus(422);
