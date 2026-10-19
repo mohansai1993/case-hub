@@ -23,7 +23,11 @@ class CaseMessageController extends Controller
     {
         $this->authorizeParticipant($request, $case);
 
+        // Fetch the most recent page (so page 1 is always "the latest conversation"),
+        // then flip it to oldest-first within that page - frontend renders top-to-bottom
+        // and wants the newest message at the bottom, not the top.
         $messages = $case->messages()->latest('id')->paginate(self::PER_PAGE);
+        $messages->setCollection($messages->getCollection()->reverse()->values());
 
         return response()->json(['data' => CaseMessageResource::collection($messages)]);
     }

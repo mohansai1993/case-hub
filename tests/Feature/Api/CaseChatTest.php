@@ -237,7 +237,7 @@ class CaseChatTest extends ApiTestCase
         $this->postJson("/api/v1/cases/{$case->id}/messages", ['body' => 'hi'], $this->bearer($outsider))->assertForbidden();
     }
 
-    public function test_message_history_is_paginated_oldest_relation_and_marks_sender_correctly(): void
+    public function test_message_history_is_oldest_first_within_the_page_and_marks_sender_correctly(): void
     {
         $client = User::factory()->create();
         $advocate = User::factory()->lawyer()->create();
@@ -251,8 +251,11 @@ class CaseChatTest extends ApiTestCase
         $this->getJson("/api/v1/cases/{$case->id}/messages", $this->bearer($advocate))
             ->assertOk()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.is_mine', true) // latest first: advocate's "Second"
-            ->assertJsonPath('data.1.is_mine', false);
+            // Oldest first within the page, so the newest message renders at the bottom.
+            ->assertJsonPath('data.0.body', 'First')
+            ->assertJsonPath('data.0.is_mine', false)
+            ->assertJsonPath('data.1.body', 'Second')
+            ->assertJsonPath('data.1.is_mine', true);
     }
 
     public function test_marking_read_only_affects_the_other_partys_messages(): void
