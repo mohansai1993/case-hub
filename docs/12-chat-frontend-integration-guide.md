@@ -164,10 +164,35 @@ Apne `is_mine: true` messages mein se jin ka `created_at <= read_at` hai, unka t
 
 ## 8. Push notification - foreground duplicate avoid karna
 
-Backend ab smart hai: agar message `delivered_at` set ho jaata hai (section 3 ka call time pe ho jaye), to FCM push **skip** ho jata hai - sirf in-app/database notification banti hai. Isliye:
+Yahan **do alag layers** hain - dono zaroori hain, ek dusre ka replacement nahi:
 
-- **Section 3 ka call sahi se lagao** - isi se duplicate push khud-ba-khud kam ho jayenge.
-- Phir bhi, agar FCM data-message aa jaaye jab app **foreground + us exact chat screen pe** ho, client-side bhi suppress karo (system notification mat dikhao, kyunki WebSocket se UI already update ho chuki hogi). Yeh purely client-side check hai: `data.case_id === currently_open_case_id` ho to local notification skip karo.
+### 8.1 Backend ka skip-logic (already implemented, backend side)
+
+Agar message `delivered_at` set ho jaata hai (section 3 ka call time pe ho jaye), to FCM push server se **bheja hi nahi jata** - sirf in-app/database notification banti hai. Yeh ek coarse "user online tha" proxy hai - **section 3 ka call sahi se lagao**, isi se zyada tar duplicate push khud-ba-khud kam ho jayenge.
+
+### 8.2 Client-side suppress (⚠️ yeh purely frontend ka kaam hai, backend se possible nahi)
+
+Backend ko pata nahi chal sakta ki user ki screen par **abhi exactly kya khula hai** - isliye yeh decision **100% app ke andar** lena hoga, jab bhi FCM message device par pahunche:
+
+```
+FCM data-message aaya: { case_id: "42", message_id: "101", ... }
+   |
+   v
+App foreground mein hai?
+   |-- Nahi -> System notification normally dikhao
+   v
+Haan
+   |
+   v
+User abhi isi case_id ("42") ki chat screen par hai (currently visible screen)?
+   |-- Nahi (list screen, kisi aur case ki chat, settings, etc.) -> System notification dikhao
+   |-- Haan -> Notification SUPPRESS karo (system banner mat dikhao) -
+               WebSocket se UI already live update ho chuki hogi
+```
+
+Implementation point: FCM ke foreground message handler mein (Flutter: `FirebaseMessaging.onMessage.listen(...)`; native: platform ka foreground-notification callback) `data.case_id` ko **currently-open-screen ke case id** se compare karo. Match ho aur app foreground mein ho to `showNotification()` call hi mat karo; baaki **har** case mein (background, kisi aur screen, kisi aur case ki chat) normally dikhao.
+
+**Yeh backend repo ka hissa nahi hai** - koi Laravel code isko control nahi kar sakta, isliye yahan sirf spec diya hai, implementation mobile-app codebase mein honi hai.
 
 ---
 
@@ -194,11 +219,35 @@ Backend ab smart hai: agar message `delivered_at` set ho jaata hai (section 3 ka
 
 ---
 
-## 11. Summary - kahan kya karna hai
+## 11. Message milne mein delay - reason aur ideal latency
+
+**Report hua issue:** app side par message milne mein time lagta hai, bura experience aata hai.
+
+**Pehle confirm: backend mein delay nahi hai.** `POST /cases/{case}/messages` call ke andar hi `broadcast(new MessageSent($message))->toOthers()` **turant** chalta hai - `ShouldBroadcastNow`, koi queue/batch delay nahi. Production logs mein bhi dekha - message save hote hi `[chat:broadcast] message.sent dispatched...` line turant print hoti hai. Laravel ka kaam milliseconds mein khatam ho jata hai.
+
+**Matlab delay hamesha Reverb-se-device wale hisse mein hoti hai**, teen likely reasons:
+
+1. **WebSocket port/scheme galat expose hai** - agar production mein Reverb raw `http/8080` par hai (SSL/reverse-proxy ke bina), to mobile carriers/corporate networks aksar non-standard ports **block ya throttle** karte hain. Fix: `wss/443` + Nginx SSL termination ke peeche Reverb chalao (`04-realtime-chat.md` section 2 mein likha hua hai) - **yeh sabse pehle check/confirm karo.**
+2. **App WebSocket event par live-listen nahi kar raha** - agar `message.sent` event subscribe nahi hai (sirf periodic `GET /messages` poll pe depend kar rahe ho), message tab hi dikhega jab app khud refresh kare - seconds se minutes tak ka delay.
+3. **Reverb process khud stable nahi hai** (crash/restart) - tab tak jab clients reconnect nahi karte, messages miss ho jate hain.
+
+### Ideal case - dono user chat screen par ho, sab sahi connected ho to:
+
+```
+Message bheja -> DB save (~10-50ms) -> Reverb ko broadcast (~10-50ms) -> doosre device ko push (~10-200ms, network RTT)
+Total: typically < 1 second
+```
+
+**Agar is ideal scenario mein bhi kayi second ka delay dikhe, to confirm hai ke masla WebSocket connectivity mein hai, backend processing mein nahi.** Pehle section 2 ka connection-setup (scheme/port) aur "app `message.sent` par live-listen kar raha hai ya sirf poll kar raha hai" - yeh dono verify karo.
+
+---
+
+## 12. Summary - kahan kya karna hai
 
 | Symptom jo report hua | Root cause | Fix kahan |
 |---|---|---|
 | Sender ko hamesha 1 grey tick | `delivered`-ack kabhi call nahi hota tha | **Frontend** - section 3 implement karo |
 | Online hone par bhi push notification | Same root cause - backend ka skip-logic `delivered_at` pe depend karta hai | **Frontend** - section 3 implement karo (backend already sahi hai) |
+| Message milne mein delay (kharab experience) | WebSocket connectivity (port/scheme) ya app sirf poll kar raha hai, live-listen nahi | **Frontend + Infra** - section 11 check karo (backend already turant broadcast karta hai) |
 
 Backend side kuch change nahi karna - endpoints, events, skip-logic sab already shipped aur tested hain.
