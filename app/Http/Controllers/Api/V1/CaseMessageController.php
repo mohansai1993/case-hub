@@ -14,6 +14,7 @@ use App\Models\LegalCase;
 use App\Notifications\NewCaseMessage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CaseMessageController extends Controller
 {
@@ -50,6 +51,8 @@ class CaseMessageController extends Controller
 
         broadcast(new MessageSent($message))->toOthers();
 
+        Log::info("[chat:broadcast] message.sent dispatched on channel case.{$case->id} (message #{$message->id}, sender {$user->user_id})");
+
         // Delayed so an already-connected recipient's delivered-ack (POST
         // .../messages/delivered) has time to land first - see NewCaseMessage::via().
         $case->otherParty($user)->notify(
@@ -69,12 +72,18 @@ class CaseMessageController extends Controller
         $user = $request->user('sanctum');
         $this->authorizeParticipant($request, $case);
 
+        // Logged unconditionally (even when nothing was pending) so this line in
+        // storage/logs/laravel.log is proof the client actually called this endpoint -
+        // the single most common chat-tick bug is the frontend never calling it.
+        Log::info("[chat:ack] delivered-ack received from user {$user->user_id} for case {$case->id}");
+
         $now = now();
         $updated = $case->messages()->undelivered()->where('sender_id', '!=', $user->user_id)
             ->update(['delivered_at' => $now]);
 
         if ($updated > 0) {
             broadcast(new MessagesDelivered($case->id, $user->user_id, $now->toIso8601String()));
+            Log::info("[chat:broadcast] messages.delivered dispatched on channel case.{$case->id} ({$updated} message(s))");
         }
 
         return response()->json(['message' => 'Marked as delivered.']);
@@ -86,6 +95,8 @@ class CaseMessageController extends Controller
         $user = $request->user('sanctum');
         $this->authorizeParticipant($request, $case);
 
+        Log::info("[chat:ack] read-ack received from user {$user->user_id} for case {$case->id}");
+
         $now = now();
         // Reading implies delivered, in case the delivered-ack was somehow missed.
         $updated = $case->messages()->unread()->where('sender_id', '!=', $user->user_id)
@@ -93,6 +104,7 @@ class CaseMessageController extends Controller
 
         if ($updated > 0) {
             broadcast(new MessagesRead($case->id, $user->user_id, $now->toIso8601String()));
+            Log::info("[chat:broadcast] messages.read dispatched on channel case.{$case->id} ({$updated} message(s))");
         }
 
         return response()->json(['message' => 'Marked as read.']);
