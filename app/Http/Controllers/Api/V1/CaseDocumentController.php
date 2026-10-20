@@ -39,16 +39,16 @@ class CaseDocumentController extends Controller
         $sizeBytes = $file->getSize();
 
         $document = DB::transaction(function () use ($case, $user, $file, $sizeBytes) {
-            if ($user->isClient()) {
-                // Lock the subscription row FIRST, before re-checking the quota: this
-                // serializes concurrent uploads from the same client so the second one
-                // re-reads "used bytes" only after the first's insert has committed,
-                // instead of both reading a stale sum and both passing.
-                $case->client->subscription()->lockForUpdate()->first();
+            // The vault belongs to the client's plan regardless of who uploads to it -
+            // lawyers have no plan of their own, so their uploads count against the
+            // case's client too. Lock the subscription row FIRST, before re-checking
+            // the quota: this serializes concurrent uploads (from either party) so a
+            // later one re-reads "used bytes" only after the earlier insert has
+            // committed, instead of both reading a stale sum and both passing.
+            $case->client->subscription()->lockForUpdate()->first();
 
-                if (! $this->quota->canUpload($case->client, $sizeBytes)) {
-                    return null;
-                }
+            if (! $this->quota->canUpload($case->client, $sizeBytes)) {
+                return null;
             }
 
             $path = $file->store(
@@ -67,11 +67,14 @@ class CaseDocumentController extends Controller
         });
 
         if ($document === null) {
-            return response()->json([
-                'message' => 'You do not have enough storage for this file. Upgrade your plan to continue.',
-                'code' => 'storage_full',
-            ], 422);
+            $message = $user->isClient()
+                ? 'You do not have enough storage for this file. Upgrade your plan to continue.'
+                : "This client's storage plan is full. Ask them to upgrade their plan before adding more evidence.";
+
+            return response()->json(['message' => $message, 'code' => 'storage_full'], 422);
         }
+
+        Log::info("[audit:document] {$user->type->value} {$user->user_id} uploaded document {$document->id} (case {$case->id})");
 
         return response()->json(['data' => new CaseDocumentResource($document)], 201);
     }
