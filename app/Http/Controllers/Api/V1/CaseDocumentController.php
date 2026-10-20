@@ -10,6 +10,8 @@ use App\Models\LegalCase;
 use App\Services\Billing\StorageQuotaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -36,26 +38,40 @@ class CaseDocumentController extends Controller
         $file = $request->file('file');
         $sizeBytes = $file->getSize();
 
-        if ($user->isClient() && ! $this->quota->canUpload($case->client, $sizeBytes)) {
+        $document = DB::transaction(function () use ($case, $user, $file, $sizeBytes) {
+            if ($user->isClient()) {
+                // Lock the subscription row FIRST, before re-checking the quota: this
+                // serializes concurrent uploads from the same client so the second one
+                // re-reads "used bytes" only after the first's insert has committed,
+                // instead of both reading a stale sum and both passing.
+                $case->client->subscription()->lockForUpdate()->first();
+
+                if (! $this->quota->canUpload($case->client, $sizeBytes)) {
+                    return null;
+                }
+            }
+
+            $path = $file->store(
+                config('casehub.case_documents.directory'),
+                config('casehub.case_documents.disk'),
+            );
+
+            return CaseDocument::create([
+                'case_id' => $case->id,
+                'uploaded_by' => $user->user_id,
+                'path' => $path,
+                'original_name' => $file->getClientOriginalName(),
+                'mime_type' => $file->getClientMimeType(),
+                'size_bytes' => $sizeBytes,
+            ]);
+        });
+
+        if ($document === null) {
             return response()->json([
                 'message' => 'You do not have enough storage for this file. Upgrade your plan to continue.',
                 'code' => 'storage_full',
             ], 422);
         }
-
-        $path = $file->store(
-            config('casehub.case_documents.directory'),
-            config('casehub.case_documents.disk'),
-        );
-
-        $document = CaseDocument::create([
-            'case_id' => $case->id,
-            'uploaded_by' => $user->user_id,
-            'path' => $path,
-            'original_name' => $file->getClientOriginalName(),
-            'mime_type' => $file->getClientMimeType(),
-            'size_bytes' => $sizeBytes,
-        ]);
 
         return response()->json(['data' => new CaseDocumentResource($document)], 201);
     }
@@ -66,6 +82,8 @@ class CaseDocumentController extends Controller
 
         abort_unless($document->case_id === $case->id, 404);
         abort_if(! $document->isAccessible(), 410, 'This file is no longer accessible.');
+
+        Log::info("[audit:document] user {$request->user('sanctum')->user_id} downloaded document {$document->id} (case {$case->id})");
 
         return Storage::disk(config('casehub.case_documents.disk'))
             ->download($document->path, $document->original_name);

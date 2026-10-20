@@ -11,6 +11,7 @@ use App\Models\LegalCase;
 use App\Services\Billing\StorageQuotaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CaseController extends Controller
 {
@@ -95,6 +96,8 @@ class CaseController extends Controller
             'submitted_at' => now(),
         ]);
 
+        Log::info("[audit:case] case {$case->id} submitted by client {$request->user('sanctum')->user_id}");
+
         return response()->json([
             'message' => 'Case submitted for review.',
             'data' => new CaseResource($case->fresh()->load('client', 'practiceArea')),
@@ -138,6 +141,8 @@ class CaseController extends Controller
 
         $case->update(['status' => CaseStatus::Accepted]);
 
+        Log::info("[audit:case] case {$case->id} accepted by advocate {$request->user('sanctum')->user_id}");
+
         return response()->json(['message' => 'Case accepted.', 'data' => ['status' => $case->status->value]]);
     }
 
@@ -150,6 +155,8 @@ class CaseController extends Controller
         }
 
         $case->update(['status' => CaseStatus::Rejected]);
+
+        Log::info("[audit:case] case {$case->id} rejected by advocate {$request->user('sanctum')->user_id}");
 
         return response()->json(['message' => 'Case rejected.', 'data' => ['status' => $case->status->value]]);
     }

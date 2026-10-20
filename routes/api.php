@@ -120,7 +120,8 @@ Route::prefix('v1')->name('api.v1.')->group(function () {
             Route::post('{case}/messages/read', [CaseMessageController::class, 'markRead'])->name('messages.read');
 
             Route::get('{case}/documents', [CaseDocumentController::class, 'index'])->name('documents.index');
-            Route::post('{case}/documents', [CaseDocumentController::class, 'store'])->name('documents.store');
+            Route::post('{case}/documents', [CaseDocumentController::class, 'store'])
+                ->middleware('throttle:api-documents')->name('documents.store');
             Route::get('{case}/documents/{document}/download', [CaseDocumentController::class, 'download'])->name('documents.download');
         });
     });

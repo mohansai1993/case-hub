@@ -106,6 +106,12 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         RateLimiter::for('api-password-reset', fn (Request $request) => Limit::perMinute(5)->by($request->ip()));
+
+        // Document upload is disk I/O + a quota recalculation, not a cheap read -
+        // tighter than the general 60/min 'api' limit, loose enough for a client
+        // attaching a batch of evidence photos to one case in one sitting.
+        RateLimiter::for('api-documents', fn (Request $request) => Limit::perMinute(20)
+            ->by($request->user('sanctum')?->getAuthIdentifier() ?: $request->ip()));
     }
 
 }
