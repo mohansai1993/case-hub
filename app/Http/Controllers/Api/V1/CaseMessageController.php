@@ -50,7 +50,11 @@ class CaseMessageController extends Controller
 
         broadcast(new MessageSent($message))->toOthers();
 
-        $case->otherParty($user)->notify(new NewCaseMessage($message));
+        // Delayed so an already-connected recipient's delivered-ack (POST
+        // .../messages/delivered) has time to land first - see NewCaseMessage::via().
+        $case->otherParty($user)->notify(
+            (new NewCaseMessage($message))->delay(now()->addSeconds(8))
+        );
 
         return response()->json(['data' => new CaseMessageResource($message)], 201);
     }
