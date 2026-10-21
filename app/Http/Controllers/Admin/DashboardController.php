@@ -33,7 +33,6 @@ class DashboardController extends Controller
             'lawyerStats' => $this->lawyerStats(),
             'caseStats' => $this->caseStats(),
             'activeSubscriptions' => ClientSubscription::where('status', SubscriptionStatus::Active)->count(),
-            'restrictedSubscriptions' => ClientSubscription::where('status', SubscriptionStatus::Restricted)->count(),
             'failedPayments' => SubscriptionCharge::where('status', 'failed')
                 ->with(['subscription.client', 'plan'])
                 ->latest()

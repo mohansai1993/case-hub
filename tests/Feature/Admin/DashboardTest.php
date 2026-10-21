@@ -42,6 +42,7 @@ class DashboardTest extends TestCase
         // 3 clients total (2 active + 1 suspended), 1 active shown as the note.
         $response->assertSeeInOrder(['Total Clients', '3']);
         $response->assertSeeInOrder(['Total Lawyers', '2']);
+        $response->assertSeeInOrder(['Suspended Clients', '1']);
         $response->assertDontSee('1,428'); // the old hardcoded stat
         $response->assertDontSee('Adv. Sarah Jenkins'); // the old dummy pending-action row
     }
@@ -76,7 +77,7 @@ class DashboardTest extends TestCase
             ->assertDontSee('94'); // old hardcoded "New Cases" number
     }
 
-    public function test_restricted_and_active_subscription_counts_are_real(): void
+    public function test_active_subscription_count_is_real_and_excludes_restricted(): void
     {
         $service = app(SubscriptionService::class);
         $active = User::factory()->create();
@@ -90,7 +91,6 @@ class DashboardTest extends TestCase
 
         $response = $this->asSuper()->get(route('admin.dashboard'))->assertOk();
 
-        $response->assertSeeInOrder(['Restricted Clients', '1']);
         $response->assertSeeInOrder(['Active Subscriptions', '1']);
     }
 

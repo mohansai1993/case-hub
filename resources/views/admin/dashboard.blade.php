@@ -30,11 +30,11 @@
 
   <div class="stat-card">
     <div class="stat-top">
-      <span>Restricted Clients</span>
-      <span class="stat-icon icon-red"><svg viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg></span>
+      <span>Suspended Clients</span>
+      <span class="stat-icon icon-red"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg></span>
     </div>
-    <div class="stat-value text-red">{{ number_format($restrictedSubscriptions) }}</div>
-    <div class="stat-note text-red"><span class="dot dot-red"></span>Grace period expired</div>
+    <div class="stat-value text-red">{{ number_format($clientStats['suspended']) }}</div>
+    <div class="stat-note text-red"><span class="dot dot-red"></span>Currently suspended</div>
   </div>
 
   <div class="stat-card">
