@@ -22,6 +22,7 @@
               <div class="alerts-list" id="alerts-list">
                 <p class="empty-msg">Loading&hellip;</p>
               </div>
+              <a href="{{ route('admin.alerts.all') }}" class="alerts-footer">See all notifications</a>
             </div>
           </div>
 

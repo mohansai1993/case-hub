@@ -75,6 +75,7 @@ Route::middleware(['auth:admin', 'admin.active', 'no-store'])
         // Topbar bell icon: every signed-in admin has their own feed, no permission gate.
         Route::prefix('alerts')->name('alerts.')->group(function () {
             Route::get('/', [AlertController::class, 'index'])->name('index');
+            Route::get('/all', [AlertController::class, 'all'])->name('all');
             Route::post('/read-all', [AlertController::class, 'markAllRead'])->name('read-all');
             Route::post('/{id}/read', [AlertController::class, 'markRead'])->name('read');
         });

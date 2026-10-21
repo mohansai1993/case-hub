@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -33,6 +34,19 @@ class AlertController extends Controller
                     'read' => $notification->read_at !== null,
                     'created_at' => $notification->created_at->diffForHumans(),
                 ]),
+        ]);
+    }
+
+    /**
+     * The bell icon's "See all notifications" link: every alert the admin has
+     * ever received, paginated, instead of the dropdown's last-10 JSON feed.
+     */
+    public function all(Request $request): View
+    {
+        $admin = $request->user('admin');
+
+        return view('admin.alerts', [
+            'notifications' => $admin->notifications()->latest()->paginate(20),
         ]);
     }
 

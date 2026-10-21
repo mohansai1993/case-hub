@@ -718,6 +718,22 @@ body.dashboard-page {
   text-overflow: ellipsis;
 }
 
+.alerts-footer {
+  flex: none;
+  display: block;
+  padding: 12px 18px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.alerts-footer:hover {
+  background: var(--light-bg);
+}
+
 .alert-time {
   color: var(--muted);
   font-size: 12px;

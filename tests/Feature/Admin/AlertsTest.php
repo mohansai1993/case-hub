@@ -144,6 +144,23 @@ class AlertsTest extends TestCase
         $this->assertNull($notification->fresh()->read_at);
     }
 
+    public function test_the_see_all_page_lists_every_notification_with_pagination(): void
+    {
+        $admin = Admin::factory()->withPermissions(['clients.view'])->create();
+        $this->registerClient(['email' => 'one@example.com', 'mobile' => '9876543211']);
+        $this->registerClient(['email' => 'two@example.com', 'mobile' => '9876543212']);
+
+        $response = $this->asAdmin($admin)->get(route('admin.alerts.all'))->assertOk();
+
+        $response->assertSee('New client registered');
+        $response->assertViewHas('notifications', fn ($notifications) => $notifications->total() === 2);
+    }
+
+    public function test_guests_cannot_reach_the_see_all_page(): void
+    {
+        $this->get(route('admin.alerts.all'))->assertRedirect(route('login'));
+    }
+
     public function test_all_notifications_can_be_marked_read_at_once(): void
     {
         $admin = Admin::factory()->withPermissions(['clients.view'])->create();
